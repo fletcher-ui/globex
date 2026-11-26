@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Globex</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%235b8cff'/%3E%3Ccircle cx='32' cy='32' r='17' fill='none' stroke='white' stroke-width='4'/%3E%3Cpath d='M15 32h34M32 15c-7 6-7 28 0 34M32 15c7 6 7 28 0 34' fill='none' stroke='white' stroke-width='3'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0b0d;
+    --surface: #111114;
+    --surface-2: #17171b;
+    --surface-3: #1e1e23;
+    --border: #26262c;
+    --border-strong: #34343c;
+    --text: #ececef;
+    --text-2: #a1a1aa;
+    --text-3: #6b6b75;
+    --accent: #5b8cff;
+    --accent-hover: #7aa2ff;
+    --accent-soft: rgba(91,140,255,.12);
+    --danger: #f87171;
+    --star: #f5b83d;
+    --radius: 10px;
+    --sidebar: 248px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 14px/1.5 Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; background: none; border: 0; padding: 0; }
+  a { color: inherit; text-decoration: none; }
+  [hidden] { display: none !important; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; border: 3px solid var(--bg); }
+  ::-webkit-scrollbar-track { background: transparent; }
+  svg.i { width: 18px; height: 18px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; letter-spacing: -.2px; }
+  .logo-mark { width: 30px; height: 30px; border-radius: 8px; background: var(--accent); display: grid; place-items: center; flex-shrink: 0; }
+  .logo-mark svg { width: 20px; height: 20px; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 38px; padding: 0 14px;
+    border-radius: 8px; border: 1px solid var(--border); background: var(--surface-2);
+    font-weight: 500; white-space: nowrap; transition: background .12s, border-color .12s;
+  }
+  .btn:hover { background: var(--surface-3); border-color: var(--border-strong); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+  .btn:focus-visible, .nav-item:focus-visible, .card:focus-visible, .icon-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ================= Password gate ================= */
+  #gate {
+    position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 16px;
+    background:
+      radial-gradient(600px 400px at 50% 0%, rgba(91,140,255,.10), transparent 70%),
+      var(--bg);
+  }
+  .gate-card {
+    width: 100%; max-width: 380px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 32px 28px 28px; box-shadow: 0 30px 60px -20px rgba(0,0,0,.6);
+  }
+  .gate-card .logo { justify-content: center; margin-bottom: 22px; font-size: 20px; }
+  .gate-card .logo-mark { width: 36px; height: 36px; border-radius: 10px; }
+  .gate-card h1 { font-size: 18px; font-weight: 600; text-align: center; margin: 0 0 4px; }
+  .gate-card p { color: var(--text-2); text-align: center; margin: 0 0 22px; }
+  .field { position: relative; margin-bottom: 12px; }
+  .field input {
+    width: 100%; height: 44px; padding: 0 44px 0 14px; border-radius: 8px; font: inherit; font-size: 15px;
+    background: var(--bg); color: var(--text); border: 1px solid var(--border); outline: 0; transition: border-color .12s, box-shadow .12s;
+  }
+  .field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .field.err input { border-color: var(--danger); box-shadow: 0 0 0 3px rgba(248,113,113,.15); }
+  .field .peek { position: absolute; right: 6px; top: 6px; width: 32px; height: 32px; display: grid; place-items: center; color: var(--text-3); border-radius: 6px; }
+  .field .peek:hover { color: var(--text); }
+  .gate-card .btn { width: 100%; height: 44px; font-size: 15px; }
+  .gate-msg { min-height: 20px; margin-top: 12px; text-align: center; font-size: 13px; color: var(--danger); }
+  .gate-msg.info { color: var(--text-3); }
+  .shake { animation: shake .35s; }
+  @keyframes shake { 20%,60% { transform: translateX(-6px); } 40%,80% { transform: translateX(6px); } }
+
+  /* ================= App shell ================= */
+  .shell { display: grid; grid-template-columns: var(--sidebar) 1fr; min-height: 100vh; }
+  aside {
+    position: sticky; top: 0; height: 100vh; overflow-y: auto;
+    background: var(--surface); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; padding: 18px 12px;
+  }
+  aside .logo { padding: 2px 8px 20px; }
+  .nav-label { font-size: 11px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; color: var(--text-3); padding: 16px 10px 6px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; width: 100%; height: 36px; padding: 0 10px;
+    border-radius: 7px; color: var(--text-2); font-weight: 500; text-align: left; transition: background .12s, color .12s;
+  }
+  .nav-item:hover { background: var(--surface-2); color: var(--text); }
+  .nav-item.active { background: var(--accent-soft); color: var(--text); }
+  .nav-item.active svg { color: var(--accent); }
+  .nav-item .count { margin-left: auto; font-size: 12px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+  .nav-item .dot { width: 18px; display: grid; place-items: center; }
+  .nav-item .dot::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--border-strong); }
+  .nav-item.active .dot::before { background: var(--accent); }
+  aside .spacer { flex: 1; min-height: 16px; }
+
+  .content { min-width: 0; display: flex; flex-direction: column; }
+  .topbar {
+    position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 12px;
+    padding: 12px 32px; background: rgba(11,11,13,.85); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+  .topbar .logo { display: none; }
+  .search {
+    flex: 1; max-width: 560px; display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 12px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text-3);
+    transition: border-color .12s, box-shadow .12s;
+  }
+  .search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .search input { flex: 1; min-width: 0; height: 100%; background: none; border: 0; outline: 0; color: var(--text); font: inherit; }
+  .search input::-webkit-search-cancel-button { filter: invert(.6); }
+  kbd { font: 11px/1 Inter, sans-serif; color: var(--text-3); border: 1px solid var(--border); border-radius: 5px; padding: 3px 6px; }
+  .topbar .actions { margin-left: auto; display: flex; gap: 8px; }
+
+  .mobile-nav { display: none; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 12px 16px 0; }
+  .mobile-nav::-webkit-scrollbar { display: none; }
+  .mobile-nav .nav-item { width: auto; height: 32px; padding: 0 12px; border: 1px solid var(--border); border-radius: 999px; white-space: nowrap; flex-shrink: 0; }
+  .mobile-nav .nav-item svg, .mobile-nav .nav-item .dot { display: none; }
+  .mobile-nav .nav-item .count { margin-left: 6px; }
+
+  main { padding: 28px 32px 48px; width: 100%; max-width: 1640px; }
+
+  .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+  .page-head h1 { font-size: 24px; font-weight: 700; letter-spacing: -.4px; margin: 0 0 2px; }
+  .page-head p { margin: 0; color: var(--text-2); }
+  select {
+    height: 36px; padding: 0 32px 0 12px; border-radius: 8px; font: inherit; color: var(--text);
+    background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center;
+    border: 1px solid var(--border); outline: 0; appearance: none; -webkit-appearance: none;
+  }
+  select:focus { border-color: var(--accent); }
+
+  .section { margin-bottom: 36px; }
+  .section-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .section-head h2 { font-size: 16px; font-weight: 600; margin: 0; }
+  .section-head .count { color: var(--text-3); font-size: 13px; }
+  .section-head .nav-arrows { margin-left: auto; display: flex; gap: 6px; }
+
+  .row { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(240px, 280px); gap: 16px; overflow-x: auto; scroll-behavior: smooth; scrollbar-width: none; }
+  .row::-webkit-scrollbar { display: none; }
+  .row .thumb { aspect-ratio: 16 / 9; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 16px; }
+
+  .card { position: relative; cursor: pointer; border-radius: var(--radius); outline-offset: 3px; min-width: 0; }
+  .thumb {
+    position: relative; aspect-ratio: 4 / 3; border-radius: var(--radius); overflow: hidden;
+    background: var(--surface-2); border: 1px solid var(--border); transition: border-color .15s, transform .15s;
+  }
+  .card:hover .thumb { border-color: var(--border-strong); transform: translateY(-2px); }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0; transition: opacity .25s; }
+  .thumb img.loaded { opacity: 1; }
+  .thumb .ph { position: absolute; inset: 0; display: grid; place-items: center; font-size: 28px; font-weight: 700; color: var(--border-strong); }
+  .thumb .play {
+    position: absolute; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,.35);
+    opacity: 0; transition: opacity .15s;
+  }
+  .thumb .play span { width: 44px; height: 44px; border-radius: 50%; background: #fff; display: grid; place-items: center; box-shadow: 0 6px 20px rgba(0,0,0,.4); }
+  .thumb .play svg { width: 18px; height: 18px; fill: #111; margin-left: 3px; }
+  .card:hover .play { opacity: 1; }
+  .card .meta { padding: 10px 2px 0; }
+  .card h3 { margin: 0; font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card .sub { font-size: 12px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fav {
+    position: absolute; top: 8px; right: 8px; z-index: 2; width: 30px; height: 30px; border-radius: 7px;
+    display: grid; place-items: center; background: rgba(11,11,13,.75); backdrop-filter: blur(6px);
+    color: #fff; opacity: 0; transition: opacity .15s;
+  }
+  .fav svg { width: 16px; height: 16px; }
+  .card:hover .fav, .fav.on { opacity: 1; }
+  .fav.on svg { fill: var(--star); stroke: var(--star); }
+  @media (hover: none) { .fav { opacity: 1; } .play { display: none !important; } }
+
+  .empty { text-align: center; color: var(--text-2); padding: 64px 20px; border: 1px dashed var(--border); border-radius: 12px; }
+  .empty strong { display: block; color: var(--text); font-size: 15px; margin-bottom: 4px; }
+  .loading { padding: 80px 0; display: grid; place-items: center; gap: 12px; color: var(--text-3); }
+  .spinner { width: 28px; height: 28px; border-radius: 50%; border: 2.5px solid var(--border); border-top-color: var(--accent); animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .more { display: flex; justify-content: center; margin-top: 28px; }
+  .skeleton .thumb { animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .5; } }
+
+  footer { margin-top: auto; padding: 20px 32px; border-top: 1px solid var(--border); color: var(--text-3); font-size: 12px; }
+
+  /* ================= Player ================= */
+  #player { position: fixed; inset: 0; z-index: 50; background: var(--bg); display: none; flex-direction: column; }
+  #player.open { display: flex; }
+  .pbar { display: flex; align-items: center; gap: 8px; height: 56px; padding: 0 12px; background: var(--surface); border-bottom: 1px solid var(--border); }
+  .pbar .title { flex: 1; min-width: 0; padding: 0 6px; }
+  .pbar .title strong { display: block; font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pbar .title a { display: block; font-size: 12px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pbar .title a[href]:hover { color: var(--accent); }
+  .pbar .sep { width: 1px; height: 24px; background: var(--border); margin: 0 4px; }
+  .icon-btn { width: 36px; height: 36px; border-radius: 8px; display: grid; place-items: center; color: var(--text-2); flex-shrink: 0; transition: background .12s, color .12s; }
+  .icon-btn:hover { background: var(--surface-3); color: var(--text); }
+  .icon-btn.on svg { fill: var(--star); stroke: var(--star); }
+  .stage { flex: 1; position: relative; background: #000; }
+  .stage iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #000; }
+  .stage .loading { position: absolute; inset: 0; padding: 0; align-content: center; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 12px); z-index: 120;
+    background: var(--surface-3); border: 1px solid var(--border-strong); border-radius: 8px;
+    padding: 10px 16px; font-weight: 500; opacity: 0; transition: .2s; pointer-events: none; box-shadow: 0 12px 30px rgba(0,0,0,.4);
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  @media (max-width: 900px) {
+    .shell { grid-template-columns: 1fr; }
+    aside { display: none; }
+    .topbar { padding: 10px 16px; flex-wrap: wrap; }
+    .topbar .logo { display: flex; }
+    .search { order: 3; flex-basis: 100%; max-width: none; }
+    .search kbd { display: none; }
+    .mobile-nav { display: flex; }
+    main { padding: 20px 16px 40px; }
+    footer { padding: 16px; }
+    .grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+    .row { grid-auto-columns: 220px; gap: 12px; }
+    .pbar .hide-sm { display: none; }
+  }
+  @media (max-width: 480px) { .topbar .actions .lbl { display: none; } }
+</style>
+</head>
+<body>
+
+<!-- ================= Password gate ================= -->
+<div id="gate">
+  <form class="gate-card" id="gateForm" autocomplete="off">
+    <div class="logo"><span class="logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c-3.2 2.6-3.2 14.4 0 17M12 3.5c3.2 2.6 3.2 14.4 0 17"/></svg></span>Globex</div>
+    <h1>Enter password</h1>
+    <p>This site is private. Enter the access password to continue.</p>
+    <div class="field" id="pwField">
+      <input id="pw" type="password" placeholder="Password" aria-label="Password" autofocus>
+      <button type="button" class="peek" id="peek" aria-label="Show password">
+        <svg class="i" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+      </button>
+    </div>
+    <button class="btn primary" type="submit" id="gateBtn">Continue</button>
+    <div class="gate-msg info" id="gateMsg">Checking access…</div>
+  </form>
+</div>
+
+<!-- ================= App ================= -->
+<div class="shell" id="app" hidden>
+  <aside>
+    <div class="logo"><span class="logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c-3.2 2.6-3.2 14.4 0 17M12 3.5c3.2 2.6 3.2 14.4 0 17"/></svg></span>Globex</div>
+    <nav id="sideNav"></nav>
+    <div class="spacer"></div>
+    <button class="nav-item" id="lockBtn">
+      <svg class="i" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Lock site
+    </button>
+  </aside>
+
+  <div class="content">
+    <div class="topbar">
+      <div class="logo"><span class="logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c-3.2 2.6-3.2 14.4 0 17M12 3.5c3.2 2.6 3.2 14.4 0 17"/></svg></span>Globex</div>
+      <label class="search">
+        <svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="q" type="search" placeholder="Search games, creators…" autocomplete="off" aria-label="Search games">
+        <kbd>/</kbd>
+      </label>
+      <div class="actions">
+        <button class="btn" id="randomBtn" title="Play a random game">
+          <svg class="i" viewBox="0 0 24 24"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg><span class="lbl">Random</span>
+        </button>
+      </div>
+    </div>
+    <div class="mobile-nav" id="mobileNav"></div>
+
+    <main>
+      <div class="page-head">
+        <div><h1 id="pageTitle">Browse</h1><p id="pageSub">Loading library…</p></div>
+        <select id="sort" aria-label="Sort games">
+          <option value="popular">Most popular</option>
+          <option value="new">Recently added</option>
+          <option value="az">Name A–Z</option>
+          <option value="za">Name Z–A</option>
+        </select>
+      </div>
+      <div id="rows"></div>
+      <div class="section">
+        <div class="section-head" id="gridHead"><h2 id="gridTitle">All games</h2><span class="count" id="gridCount"></span></div>
+        <div class="grid" id="grid"></div>
+        <div id="gridEmpty"></div>
+        <div class="more"><button class="btn" id="moreBtn" hidden>Load more</button></div>
+      </div>
+    </main>
+
+    <footer>© Globex. All games are the property of their respective creators; credits appear in the player.</footer>
+  </div>
+</div>
+
+<!-- ================= Player ================= -->
+<div id="player" role="dialog" aria-modal="true" aria-label="Game player">
+  <div class="pbar">
+    <button class="icon-btn" id="pBack" title="Back to library"><svg class="i" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
+    <div class="title"><strong id="pTitle"></strong><a id="pAuthor" target="_blank" rel="noopener"></a></div>
+    <button class="icon-btn" id="pFav" title="Favorite"><svg class="i" viewBox="0 0 24 24"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2l1.1-6.2L3 9.6l6.2-.9z"/></svg></button>
+    <button class="icon-btn" id="pReload" title="Restart game"><svg class="i" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6"/></svg></button>
+    <button class="icon-btn hide-sm" id="pTab" title="Open in new tab"><svg class="i" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></button>
+    <span class="sep hide-sm"></span>
+    <button class="icon-btn" id="pFull" title="Fullscreen"><svg class="i" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+  </div>
+  <div class="stage" id="stage">
+    <iframe id="frame" title="Game" allow="fullscreen; autoplay; gamepad; clipboard-write" allowfullscreen></iframe>
+    <div class="loading" id="pStatus"><div class="spinner"></div><span>Loading game…</span></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  /* =====================================================================
+     SETTINGS
+     To change the site password, edit the word between the quotes below,
+     then commit. Everyone is asked for the new password within ~5 minutes.
+     (Don't use the ' character in the password.)
+     ===================================================================== */
+  const PASSWORD = 'gl0b3x';
+
+  const REPO = 'fletcher-ui/globex';
+  const BRANCH = 'main';
+
+  // jsDelivr can cache this file for hours, so the site also reads the newest
+  // password straight from GitHub (refreshes within ~5 minutes).
+  const LIVE_URLS = [`https://raw.githubusercontent.com/${REPO}/${BRANCH}/index.html`];
+  const CATALOG_URLS = [
+    'https://cdn.jsdelivr.net/gh/freebuisness/assets@main/zones.json',
+    'https://raw.githubusercontent.com/freebuisness/assets/main/zones.json',
+    'https://cdn.jsdelivr.net/gh/gn-math/assets@main/zones.json',
+  ];
+  const HTML_BASES  = ['https://cdn.jsdelivr.net/gh/freebuisness/html@main', 'https://raw.githubusercontent.com/freebuisness/html/main'];
+  const COVER_BASES = ['https://cdn.jsdelivr.net/gh/freebuisness/covers@main', 'https://raw.githubusercontent.com/freebuisness/covers/main'];
+
+  const CATEGORY_LABELS = {
+    featured: 'Featured', port: 'Ports', flash: 'Flash', emulator: 'Emulator', fnf: 'Friday Night Funkin\'',
+    dos: 'DOS', nds: 'Nintendo DS', gba: 'Game Boy Advance', psx: 'PlayStation', nes: 'NES', n64: 'Nintendo 64', tools: 'Tools',
+  };
+  const PAGE = 120;
+
+  const $ = id => document.getElementById(id);
+  const store = {
+    get(k, d) { try { return JSON.parse(localStorage.getItem('globex:' + k)) ?? d; } catch { return d; } },
+    set(k, v) { try { localStorage.setItem('globex:' + k, JSON.stringify(v)); } catch {} },
+    del(k) { try { localStorage.removeItem('globex:' + k); } catch {} },
+  };
+
+  /* ---------- SHA-256 (works everywhere, including file:// pages) ---------- */
+  function sha256(str) {
+    const rotr = (x, n) => (x >>> n) | (x << (32 - n));
+    const K = [], H = []; const frac = x => ((x - Math.floor(x)) * 4294967296) | 0;
+    for (let n = 2, c = 0; c < 64; n++) {
+      let prime = true; for (let d = 2; d * d <= n; d++) if (n % d === 0) { prime = false; break; }
+      if (prime) { if (c < 8) H[c] = frac(Math.sqrt(n)); K[c++] = frac(Math.cbrt(n)); }
+    }
+    const bytes = new TextEncoder().encode(str), len = bytes.length;
+    const total = (((len + 9) + 63) >> 6) << 6, m = new Uint8Array(total); m.set(bytes); m[len] = 0x80;
+    const dv = new DataView(m.buffer), bits = len * 8;
+    dv.setUint32(total - 8, Math.floor(bits / 4294967296)); dv.setUint32(total - 4, bits >>> 0);
+    const w = new Array(64);
+    for (let off = 0; off < total; off += 64) {
+      for (let i = 0; i < 16; i++) w[i] = dv.getUint32(off + i * 4) | 0;
+      for (let i = 16; i < 64; i++) {
+        const s0 = rotr(w[i-15], 7) ^ rotr(w[i-15], 18) ^ (w[i-15] >>> 3);
+        const s1 = rotr(w[i-2], 17) ^ rotr(w[i-2], 19) ^ (w[i-2] >>> 10);
+        w[i] = (w[i-16] + s0 + w[i-7] + s1) | 0;
+      }
+      let [a, b, c, d, e, f, g, h] = H;
+      for (let i = 0; i < 64; i++) {
+        const t1 = (h + (rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25)) + ((e & f) ^ (~e & g)) + K[i] + w[i]) | 0;
+        const t2 = ((rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22)) + ((a & b) ^ (a & c) ^ (b & c))) | 0;
+        h = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b; b = a; a = (t1 + t2) | 0;
+      }
+      H[0] = (H[0] + a) | 0; H[1] = (H[1] + b) | 0; H[2] = (H[2] + c) | 0; H[3] = (H[3] + d) | 0;
+      H[4] = (H[4] + e) | 0; H[5] = (H[5] + f) | 0; H[6] = (H[6] + g) | 0; H[7] = (H[7] + h) | 0;
+    }
+    return H.map(x => (x >>> 0).toString(16).padStart(8, '0')).join('');
+  }
+  const hashPassword = pw => sha256('globex:' + pw);
+
+  /* ---------- Network ---------- */
+  async function fetchFirst(urls, as = 'json', timeout = 8000) {
+    let lastErr;
+    for (const u of urls) {
+      const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), timeout);
+      try {
+        const r = await fetch(u, { cache: 'no-cache', signal: ctrl.signal });
+        if (!r.ok) throw new Error(r.status + ' ' + u);
+        return as === 'json' ? await r.json() : await r.text();
+      } catch (e) { lastErr = e; } finally { clearTimeout(t); }
+    }
+    throw lastErr;
+  }
+
+  /* =====================================================================
+     PASSWORD GATE
+     Everyone's saved login is tied to the current password. Change the
+     password on GitHub and everyone is asked for the new one.
+     ===================================================================== */
+  let requiredHash = hashPassword(PASSWORD);
+
+  async function gate() {
+    const msg = $('gateMsg');
+    try {
+      const live = await fetchFirst(LIVE_URLS, 'text', 4000);
+      const m = live.match(/const PASSWORD = '([^'\n]*)'/);
+      if (m) requiredHash = hashPassword(m[1]);
+    } catch { /* GitHub blocked or offline: use the password built into this copy */ }
+    if (store.get('unlocked', null) === requiredHash) return unlock();
+    msg.className = 'gate-msg info'; msg.textContent = '';
+    $('pw').focus();
+  }
+
+  $('gateForm').addEventListener('submit', e => {
+    e.preventDefault();
+    if (!requiredHash) return;
+    const field = $('pwField'), msg = $('gateMsg');
+    if (hashPassword($('pw').value) === requiredHash) {
+      store.set('unlocked', requiredHash);
+      unlock();
+    } else {
+      field.classList.add('err'); msg.className = 'gate-msg'; msg.textContent = 'Incorrect password. Try again.';
+      const card = $('gateForm'); card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake');
+      $('pw').select();
+    }
+  });
+  $('pw').addEventListener('input', () => { $('pwField').classList.remove('err'); $('gateMsg').textContent = ''; });
+  $('peek').onclick = () => { const p = $('pw'); p.type = p.type === 'password' ? 'text' : 'password'; p.focus(); };
+
+  let booted = false;
+  function unlock() {
+    $('gate').hidden = true; $('app').hidden = false;
+    if (!booted) { booted = true; loadLibrary(); }
+  }
+  $('lockBtn').onclick = () => { store.del('unlocked'); location.reload(); };
+
+
+  /* =====================================================================
+     LIBRARY
+     ===================================================================== */
+  let games = [], byId = new Map();
+  let favs = new Set(store.get('favs', []));
+  let recent = store.get('recent', []);
+  let state = { cat: 'all', q: '', sort: 'popular', shown: PAGE };
+  let current = null;
+
+  const htmlUrls  = g => HTML_BASES.map(b => g.rawUrl.replace('{HTML_URL}', b));
+  const coverUrls = g => COVER_BASES.map(b => g.rawCover.replace('{COVER_URL}', b));
+  const catOf = g => (g.special && g.special[0]) || null;
+  const norm = s => s.toLowerCase().normalize('NFKD').replace(/[^a-z0-9 ]/g, '');
+
+  let toastTimer;
+  function toast(msg) {
+    const t = $('toast'); t.textContent = msg; t.classList.add('show');
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 1800);
+  }
+
+  const ICONS = {
+    all: '<svg class="i" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',
+    favs: '<svg class="i" viewBox="0 0 24 24"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2l1.1-6.2L3 9.6l6.2-.9z"/></svg>',
+    recent: '<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  };
+  const STAR = ICONS.favs;
+
+  /* ---------- Cards ---------- */
+  const imgObserver = new IntersectionObserver(entries => {
+    for (const e of entries) {
+      if (!e.isIntersecting) continue;
+      const img = e.target; imgObserver.unobserve(img);
+      const srcs = JSON.parse(img.dataset.srcs); let i = 0;
+      img.onload = () => { img.classList.add('loaded'); img.parentNode.querySelector('.ph')?.remove(); };
+      img.onerror = () => { if (++i < srcs.length) img.src = srcs[i]; };
+      img.src = srcs[0];
+    }
+  }, { rootMargin: '400px' });
+
+  function card(g) {
+    const el = document.createElement('div');
+    el.className = 'card'; el.tabIndex = 0; el.setAttribute('role', 'button'); el.dataset.id = g.id;
+    el.setAttribute('aria-label', 'Play ' + g.name);
+    const cat = catOf(g);
+    el.innerHTML = `
+      <div class="thumb"><img alt=""><div class="ph"></div>
+        <div class="play"><span><svg viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></svg></span></div></div>
+      <button class="fav${favs.has(g.id) ? ' on' : ''}" aria-label="Add to favorites">${STAR}</button>
+      <div class="meta"><h3></h3><div class="sub"></div></div>`;
+    el.querySelector('h3').textContent = g.name;
+    el.querySelector('.ph').textContent = g.name.charAt(0).toUpperCase();
+    el.querySelector('.sub').textContent = [cat && CATEGORY_LABELS[cat], g.author].filter(Boolean).join(' · ') || 'Game';
+    const img = el.querySelector('img'); img.dataset.srcs = JSON.stringify(coverUrls(g)); imgObserver.observe(img);
+    el.querySelector('.fav').onclick = e => { e.stopPropagation(); toggleFav(g.id); };
+    el.onclick = () => openGame(g.id);
+    el.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openGame(g.id); } };
+    return el;
+  }
+
+  /* ---------- Lists ---------- */
+  function sorted(list) {
+    const l = [...list];
+    if (state.sort === 'az') l.sort((a, b) => a.name.localeCompare(b.name));
+    else if (state.sort === 'za') l.sort((a, b) => b.name.localeCompare(a.name));
+    else if (state.sort === 'new') l.sort((a, b) => b.id - a.id);
+    else l.sort((a, b) => (b.featured - a.featured) || a.order - b.order);
+    return l;
+  }
+  function matchQ(g) {
+    if (!state.q) return true;
+    const q = norm(state.q);
+    return g.search.includes(q) || q.split(/\s+/).every(w => g.search.includes(w));
+  }
+  function currentList() {
+    const c = state.cat;
+    if (c === 'recent') return recent.map(id => byId.get(id)).filter(Boolean).filter(matchQ);
+    let l = c === 'all' ? games
+      : c === 'favs' ? games.filter(g => favs.has(g.id))
+      : c === 'featured' ? games.filter(g => g.featured)
+      : games.filter(g => (g.special || []).includes(c));
+    return sorted(l.filter(matchQ));
+  }
+
+  /* ---------- Navigation ---------- */
+  function navItems() {
+    const counts = {};
+    games.forEach(g => (g.special || []).forEach(s => counts[s] = (counts[s] || 0) + 1));
+    return {
+      library: [
+        ['all', 'All games', games.length, ICONS.all],
+        ['favs', 'Favorites', favs.size, ICONS.favs],
+        ['recent', 'Recently played', recent.length, ICONS.recent],
+      ],
+      cats: [
+        ['featured', CATEGORY_LABELS.featured, games.filter(g => g.featured).length],
+        ...Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([k, n]) => [k, CATEGORY_LABELS[k] || k, n]),
+      ],
+    };
+  }
+  function navButton([key, label, n, icon]) {
+    const b = document.createElement('button');
+    b.className = 'nav-item' + (state.cat === key ? ' active' : '');
+    b.innerHTML = `${icon || '<span class="dot"></span>'}<span class="lbl"></span><span class="count">${n}</span>`;
+    b.querySelector('.lbl').textContent = label;
+    b.onclick = () => setCat(key);
+    return b;
+  }
+  function renderNav() {
+    const { library, cats } = navItems();
+    const side = $('sideNav'); side.innerHTML = '';
+    const lab = t => { const d = document.createElement('div'); d.className = 'nav-label'; d.textContent = t; return d; };
+    side.append(lab('Library'), ...library.map(navButton), lab('Categories'), ...cats.map(navButton));
+    const mob = $('mobileNav'); mob.innerHTML = '';
+    mob.append(...library.map(navButton), ...cats.map(navButton));
+  }
+  function setCat(key) {
+    state.cat = key; state.shown = PAGE;
+    renderNav(); render(); scrollTo({ top: 0 });
+  }
+
+  /* ---------- Rendering ---------- */
+  function addRow(title, list) {
+    if (!list.length) return;
+    const sec = document.createElement('div'); sec.className = 'section';
+    sec.innerHTML = `<div class="section-head"><h2></h2><span class="count">${list.length}</span>
+      <div class="nav-arrows">
+        <button class="icon-btn" data-d="-1" aria-label="Scroll left"><svg class="i" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button>
+        <button class="icon-btn" data-d="1" aria-label="Scroll right"><svg class="i" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
+      </div></div><div class="row"></div>`;
+    sec.querySelector('h2').textContent = title;
+    const row = sec.querySelector('.row');
+    list.forEach(g => row.appendChild(card(g)));
+    sec.querySelectorAll('[data-d]').forEach(b => b.onclick = () => row.scrollBy({ left: +b.dataset.d * row.clientWidth * .9 }));
+    $('rows').appendChild(sec);
+  }
+
+  function render() {
+    const rows = $('rows'); rows.innerHTML = '';
+    const home = state.cat === 'all' && !state.q;
+    if (home) {
+      addRow('Continue playing', recent.slice(0, 15).map(id => byId.get(id)).filter(Boolean));
+      addRow('Featured', games.filter(g => g.featured));
+    }
+    const list = currentList();
+    const titles = { all: 'Browse', favs: 'Favorites', recent: 'Recently played' };
+    $('pageTitle').textContent = state.q ? 'Search' : titles[state.cat] || CATEGORY_LABELS[state.cat] || state.cat;
+    $('pageSub').textContent = state.q
+      ? `${list.length} result${list.length === 1 ? '' : 's'} for “${state.q}”`
+      : home ? `${games.length.toLocaleString()} games, ready to play in your browser.`
+      : `${list.length} game${list.length === 1 ? '' : 's'}`;
+    $('gridHead').hidden = !home;
+    $('gridTitle').textContent = 'All games';
+    $('gridCount').textContent = list.length;
+    $('sort').disabled = state.cat === 'recent';
+
+    const grid = $('grid'); grid.innerHTML = '';
+    const frag = document.createDocumentFragment();
+    list.slice(0, state.shown).forEach(g => frag.appendChild(card(g)));
+    grid.appendChild(frag);
+    $('moreBtn').hidden = list.length <= state.shown;
+    $('moreBtn').textContent = `Load more (${(list.length - state.shown).toLocaleString()} remaining)`;
+
+    const empty = $('gridEmpty');
+    if (list.length) empty.innerHTML = '';
+    else {
+      const [t, s] = state.q ? ['No results', 'Try a different search term.']
+        : state.cat === 'favs' ? ['No favorites yet', 'Select the star on any game to save it here.']
+        : state.cat === 'recent' ? ['Nothing played yet', 'Games you open will appear here.']
+        : ['No games', 'This category is empty.'];
+      empty.innerHTML = `<div class="empty"><strong>${t}</strong>${s}</div>`;
+    }
+  }
+
+  function toggleFav(id) {
+    const on = !favs.has(id);
+    on ? favs.add(id) : favs.delete(id);
+    store.set('favs', [...favs]);
+    toast(on ? 'Added to favorites' : 'Removed from favorites');
+    document.querySelectorAll(`.card[data-id="${id}"] .fav`).forEach(b => b.classList.toggle('on', on));
+    if (current && current.id === id) $('pFav').classList.toggle('on', on);
+    renderNav();
+    if (state.cat === 'favs') render();
+  }
+
+  /* =====================================================================
+     PLAYER
+     ===================================================================== */
+  async function loadInto(win, g) {
+    const html = await fetchFirst(htmlUrls(g), 'text', 15000);
+    win.document.open(); win.document.write(html); win.document.close();
+  }
+
+  async function openGame(id, fromHash = false) {
+    const g = byId.get(id); if (!g) return;
+    current = g;
+    if (!fromHash) history.pushState({ game: id }, '', '#game/' + id);
+    document.title = g.name + ' — Globex';
+    $('pTitle').textContent = g.name;
+    const a = $('pAuthor');
+    a.textContent = g.author ? 'by ' + g.author : '';
+    g.authorLink ? a.href = g.authorLink : a.removeAttribute('href');
+    $('pFav').classList.toggle('on', favs.has(id));
+    $('player').classList.add('open');
+    document.body.style.overflow = 'hidden';
+    recent = [id, ...recent.filter(x => x !== id)].slice(0, 30);
+    store.set('recent', recent);
+    await startFrame(g);
+  }
+
+  async function startFrame(g) {
+    const old = $('frame'); const frame = old.cloneNode(); old.replaceWith(frame);
+    const st = $('pStatus'); st.style.display = 'grid';
+    st.innerHTML = '<div class="spinner"></div><span>Loading game…</span>';
+    try {
+      await loadInto(frame.contentWindow, g);
+      if (current === g) st.style.display = 'none';
+    } catch (e) {
+      console.error(e);
+      if (current === g) st.innerHTML = '<span>This game couldn’t be loaded. Check your connection and select restart.</span>';
+    }
+    frame.focus();
+  }
+
+  function closePlayer(fromHash = false) {
+    if (!current) return;
+    current = null;
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    const old = $('frame'); old.replaceWith(old.cloneNode());
+    $('player').classList.remove('open');
+    document.body.style.overflow = '';
+    document.title = 'Globex';
+    if (!fromHash) history.pushState({}, '', location.pathname + location.search);
+    renderNav(); if (state.cat === 'all' || state.cat === 'recent') render();
+  }
+
+  $('pBack').onclick = () => closePlayer();
+  $('pFav').onclick = () => current && toggleFav(current.id);
+  $('pReload').onclick = () => current && startFrame(current);
+  $('pFull').onclick = () => {
+    const s = $('stage');
+    if (document.fullscreenElement) document.exitFullscreen();
+    else (s.requestFullscreen || s.webkitRequestFullscreen).call(s);
+  };
+  $('pTab').onclick = async () => {
+    if (!current) return;
+    const win = window.open('about:blank', '_blank');
+    if (!win) return toast('Pop-up blocked. Allow pop-ups to open games in a new tab.');
+    try { win.document.title = current.name; await loadInto(win, current); }
+    catch { win.close(); toast('Couldn’t open the game.'); }
+  };
+
+  /* ---------- Routing & controls ---------- */
+  function route() {
+    const m = location.hash.match(/^#game\/(\d+)/);
+    if (m && byId.has(+m[1])) openGame(+m[1], true); else closePlayer(true);
+  }
+  window.addEventListener('popstate', () => { if (booted) route(); });
+
+  let qTimer;
+  $('q').addEventListener('input', e => {
+    clearTimeout(qTimer);
+    qTimer = setTimeout(() => { state.q = e.target.value.trim(); state.shown = PAGE; render(); }, 120);
+  });
+  $('q').addEventListener('keydown', e => { if (e.key === 'Enter') { const f = currentList()[0]; if (f) openGame(f.id); } });
+  $('sort').onchange = e => { state.sort = e.target.value; state.shown = PAGE; render(); };
+  $('moreBtn').onclick = () => { state.shown += PAGE; render(); };
+  $('randomBtn').onclick = () => {
+    const pool = currentList().length ? currentList() : games;
+    if (pool.length) openGame(pool[Math.floor(Math.random() * pool.length)].id);
+  };
+  document.querySelectorAll('.shell .logo').forEach(l => { l.style.cursor = 'pointer'; l.onclick = () => { $('q').value = ''; state.q = ''; setCat('all'); }; });
+  document.addEventListener('keydown', e => {
+    if ($('app').hidden) return;
+    const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
+    if (current) { if (e.key === 'Escape' && !document.fullscreenElement) closePlayer(); return; }
+    if (e.key === '/' && !typing) { e.preventDefault(); $('q').focus(); }
+  });
+
+  async function loadLibrary() {
+    const grid = $('grid');
+    grid.innerHTML = Array.from({ length: 18 }, () => '<div class="card skeleton"><div class="thumb"></div></div>').join('');
+    try {
+      const data = await fetchFirst(CATALOG_URLS, 'json', 10000);
+      games = data
+        .filter(g => g.id >= 0 && g.url && !String(g.name).includes('[!]') && g.url.includes('{HTML_URL}'))
+        .map((g, i) => ({
+          id: g.id, name: g.name, author: g.author, authorLink: g.authorLink,
+          special: g.special, featured: g.featured ? 1 : 0, order: i,
+          rawUrl: g.url, rawCover: g.cover || '',
+          search: norm(g.name + ' ' + (g.author || '') + ' ' + (g.special || []).join(' ')),
+        }));
+      byId = new Map(games.map(g => [g.id, g]));
+      recent = recent.filter(id => byId.has(id));
+      renderNav(); render(); route();
+    } catch (e) {
+      console.error(e);
+      grid.innerHTML = '';
+      $('pageSub').textContent = 'The game library is unavailable right now.';
+      $('gridEmpty').innerHTML = '<div class="empty"><strong>Couldn’t load games</strong>Check your connection, then <a href="javascript:location.reload()" style="color:var(--accent)">try again</a>.</div>';
+    }
+  }
+
+  gate();
+})();
+</script>
+</body>
+</html>
