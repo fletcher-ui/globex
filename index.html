@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <!-- Keep this line: the Globex launcher checks for it before using a download. -->
 <meta name="globex" content="site">
+<!-- Version: the launcher always picks the newest copy it can reach. Raise this number with every update. -->
+<meta name="globex-version" content="202611272000">
+<!-- Optional extra addresses for this file (space-separated). The launcher remembers them and tries them first next time. -->
+<meta name="globex-mirrors" content="">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Globex</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%235b8cff'/%3E%3Ccircle cx='32' cy='32' r='17' fill='none' stroke='white' stroke-width='4'/%3E%3Cpath d='M15 32h34M32 15c-7 6-7 28 0 34M32 15c7 6 7 28 0 34' fill='none' stroke='white' stroke-width='3'/%3E%3C/svg%3E">
@@ -392,6 +396,8 @@
   .ai-prog .row2 { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-3); }
   .ai-alt { text-align: center; margin-top: 18px; font-size: 13px; color: var(--text-3); }
   .ai-alt button { color: var(--accent); text-decoration: underline; }
+  .ai-diag { margin: 16px auto 0; max-width: 560px; text-align: left; background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px; padding: 14px 16px; display: grid; gap: 7px; font-size: 13px; color: var(--text); }
+  .ai-diag span { color: var(--text-3); } .ai-diag .btn { justify-self: start; margin-top: 6px; height: 32px; font-size: 13px; }
   .ai-err { margin-top: 14px; padding: 12px 14px; border-radius: 10px; background: rgba(248,113,113,.1); color: var(--danger); font-size: 13px; }
   .ai-load { position: absolute; inset: 0; display: grid; place-content: center; gap: 12px; justify-items: center; background: var(--bg); z-index: 2; color: var(--text-2); }
   .ai-promo { display: flex; align-items: center; gap: 16px; padding: 18px 20px; margin-bottom: 44px; border-radius: 14px; cursor: pointer; text-align: left; width: 100%;
@@ -1414,14 +1420,16 @@
   const AI_MODELS = [
     { id: 'qwen25-05b', name: 'Quick', label: 'Qwen 2.5 · 0.5B', approx: '≈ 400 MB',
       desc: 'Fast on any computer. Good for quick questions and simple help.', speed: 'Fastest',
+      repos: ['Qwen/Qwen2.5-0.5B-Instruct-GGUF', 'bartowski/Qwen2.5-0.5B-Instruct-GGUF'], prefer: ['q4_k_m', 'q5_k_m', 'q8_0'],
       sources: [...HF('Qwen/Qwen2.5-0.5B-Instruct-GGUF', 'qwen2.5-0.5b-instruct-q4_k_m.gguf'), ...HF('bartowski/Qwen2.5-0.5B-Instruct-GGUF', 'Qwen2.5-0.5B-Instruct-Q4_K_M.gguf')] },
     { id: 'qwen25-15b', name: 'Smart', label: 'Qwen 2.5 · 1.5B', approx: '≈ 1.1 GB',
       desc: 'Noticeably smarter answers, homework help and writing. Best with a graphics chip.', speed: 'Smarter',
+      repos: ['Qwen/Qwen2.5-1.5B-Instruct-GGUF', 'bartowski/Qwen2.5-1.5B-Instruct-GGUF'], prefer: ['q4_k_m', 'q5_k_m', 'q8_0'],
       sources: [...HF('Qwen/Qwen2.5-1.5B-Instruct-GGUF', 'qwen2.5-1.5b-instruct-q4_k_m.gguf'), ...HF('bartowski/Qwen2.5-1.5B-Instruct-GGUF', 'Qwen2.5-1.5B-Instruct-Q4_K_M.gguf')] },
     { id: 'smolvlm-500m', name: 'Vision', label: 'SmolVLM · 0.5B', approx: '≈ 550 MB', vision: true,
       desc: 'Can look at pictures and talk about them. Used automatically when you add a picture.', speed: 'Sees pictures',
       // File names are looked up from the model page, so a renamed file doesn't break the download.
-      repos: ['ggml-org/SmolVLM-500M-Instruct-GGUF', 'ggml-org/SmolVLM2-500M-Video-Instruct-GGUF', 'ggml-org/SmolVLM-256M-Instruct-GGUF'] },
+      repos: ['ggml-org/SmolVLM-500M-Instruct-GGUF', 'ggml-org/SmolVLM2-500M-Video-Instruct-GGUF', 'ggml-org/SmolVLM-256M-Instruct-GGUF'], prefer: ['q8_0', 'q4_k_m', 'f16'] },
   ];
   const AI_VISION = 'smolvlm-500m';
   const AI_VISION_SYSTEM = 'You are Globex AI. When the user shares a picture, look carefully and describe or answer questions about it clearly and briefly. If you cannot tell something from the picture, say so.';
@@ -1489,47 +1497,55 @@
     return ai.mod;
   }
 
-  // Resumable model download: 16 MB pieces, 3 at a time, each saved as it arrives.
+  // Model download. Saved in 16 MB pieces as it arrives, so it can pause, lose Wi-Fi, and continue.
+  // The first request is a plain one (no "Range"), which works even where partial requests are refused.
   async function aiProbe(url, signal) {
-    const r = await fetch(url, { headers: { Range: 'bytes=0-15' }, signal });
-    if (r.status !== 206 && r.status !== 200) throw new Error('HTTP ' + r.status);
-    const head = new Uint8Array(await r.arrayBuffer()).slice(0, 4);
-    if (String.fromCharCode(...head) !== 'GGUF') throw new Error('not a model file (blocked or moved?)');
-    let total = 0;
-    const cr = r.headers.get('content-range'); if (cr && /\/(\d+)/.test(cr)) total = +cr.match(/\/(\d+)/)[1];
-    if (!total) { try { const h = await fetch(url, { method: 'HEAD', signal }); total = +h.headers.get('content-length') || 0; } catch {} }
+    const r = await fetch(url, { signal });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const total = +r.headers.get('content-length') || 0;
+    const rd = r.body.getReader(); let head = new Uint8Array(0);
+    while (head.length < 4) { const { value, done } = await rd.read(); if (done) break; const h = new Uint8Array(head.length + value.length); h.set(head); h.set(value, head.length); head = h; }
+    rd.cancel().catch(() => {});
+    if (String.fromCharCode(...head.slice(0, 4)) !== 'GGUF') throw new Error('not a model file (blocked page?)');
     if (!total) throw new Error('size unknown');
-    return { total, ranged: r.status === 206 };
+    return { total };
   }
   async function aiResolve(m, signal) {
-    if (!m.repos) return [m.sources];
-    for (const repo of m.repos) for (const host of ['https://huggingface.co', 'https://hf-mirror.com']) {
+    const errs = [];
+    if (m.repos) for (const repo of m.repos) for (const host of ['https://huggingface.co', 'https://hf-mirror.com']) {
       try {
-        const r = await fetch(`${host}/api/models/${repo}`, { signal }); if (!r.ok) throw new Error(r.status);
-        const all = ((await r.json()).siblings || []).map(x => x.rfilename).filter(f => /\.gguf$/i.test(f));
-        const pick = (list, prefs) => prefs.map(p => list.find(f => f.toLowerCase().includes(p))).find(Boolean) || list[0];
-        const mm = pick(all.filter(f => /mmproj/i.test(f)), ['q8_0', 'f16']), md = pick(all.filter(f => !/mmproj/i.test(f)), ['q8_0', 'q4_k_m', 'f16']);
-        if (mm && md) return [HF(repo, md), HF(repo, mm)];
-      } catch (e) { if (signal.aborted) throw e; }
+        const r = await fetch(`${host}/api/models/${repo}`, { signal }); if (!r.ok) throw new Error('HTTP ' + r.status);
+        const all = ((await r.json()).siblings || []).map(x => x.rfilename).filter(f => /\.gguf$/i.test(f) && !/-of-\d+/.test(f));
+        const pick = (list, prefs) => prefs.map(p => list.find(f => f.toLowerCase().includes(p))).find(Boolean) || null;
+        const md = pick(all.filter(f => !/mmproj/i.test(f)), m.prefer || ['q4_k_m']);
+        if (!md) throw new Error('no suitable file');
+        if (!m.vision) return [HF(repo, md)];
+        const mm = pick(all.filter(f => /mmproj/i.test(f)), ['q8_0', 'f16']);
+        if (mm) return [HF(repo, md), HF(repo, mm)];
+      } catch (e) { if (signal.aborted) throw e; errs.push(host.replace('https://', '') + ': ' + e.message); }
     }
-    throw new Error('blocked');
+    if (m.sources) return [m.sources];   // the file list couldn't be read: fall back to the known addresses
+    const err = new Error('blocked'); err.details = errs.join(' · '); throw err;
   }
+  const aiSaveErr = e => /quota|space|SecurityError|not allowed|denied|UnknownError|InvalidState/i.test(String(e && (e.name + ' ' + e.message)));
   async function aiDownload(id, inline) {
     const m = aiModel(id);
     const ctrl = new AbortController();
     ai.dl = { id, ctrl, loaded: 0, total: 0, speed: 0, error: null, inline: !!inline };
     renderAIAgain();
     try {
+      try { await offline.putFile('ai-test', new Blob(['ok'])); await offline.deleteFile('ai-test'); }   // can this browser save at all?
+      catch (e) { const er = new Error('cannot save'); er.save = true; throw er; }
       let meta = aiMeta(id);
       if (!meta || !(meta.files || meta.url)) {
-        const groups = await aiResolve(m, ctrl.signal), files = [];
+        const groups = await aiResolve(m, ctrl.signal), files = [], tried = [];
         for (const sources of groups) {
           let found = null;
           for (const url of sources) {
-            try { const p = await aiProbe(url, ctrl.signal); if (!p.ranged) throw new Error('no resume support'); found = { url, total: p.total, done: [] }; break; }
-            catch (e) { if (ctrl.signal.aborted) throw e; }
+            try { const p = await aiProbe(url, ctrl.signal); found = { url, total: p.total, done: [] }; break; }
+            catch (e) { if (ctrl.signal.aborted) throw e; tried.push(url.split('/')[2] + ': ' + e.message); }
           }
-          if (!found) throw new Error('blocked');
+          if (!found) { const er = new Error('blocked'); er.details = tried.join(' · '); throw er; }
           files.push(found);
         }
         meta = { files, chunk: AI_CHUNK };
@@ -1539,33 +1555,54 @@
       ai.dl.total = files.reduce((a, f) => a + f.total, 0);
       ai.dl.loaded = files.reduce((a, f) => a + (f.done || []).reduce((x, i) => x + size(f, i), 0), 0);
       const t0 = performance.now(), b0 = ai.dl.loaded;
+      const markDone = async (k, f, done, i, blob) => {
+        await offline.putFile(aiPartKey(id, f, i), blob);
+        done.add(i);
+        const saved = aiMeta(id) || meta;
+        if (saved.files) saved.files[k].done = [...done]; else saved.done = [...done];
+        store.set('ai-dl-' + id, saved);
+        ai.dl.loaded += blob.size;
+        const dt = (performance.now() - t0) / 1000; if (dt > 1) ai.dl.speed = (ai.dl.loaded - b0) / dt;
+        aiProgress();
+      };
       for (let k = 0; k < files.length; k++) {
         const f = files[k], n = Math.ceil(f.total / meta.chunk), done = new Set(f.done || []);
         const todo = [...Array(n).keys()].filter(i => !done.has(i));
-        const worker = async () => {
-          while (todo.length) {
-            const i = todo.shift(), start = i * meta.chunk, end = start + size(f, i) - 1;
-            let blob, tries = 0;
-            for (;;) {
-              try {
-                const r = await fetch(f.url, { headers: { Range: `bytes=${start}-${end}` }, signal: ctrl.signal });
-                if (r.status !== 206) throw new Error('HTTP ' + r.status);
-                blob = await r.blob(); if (blob.size !== end - start + 1) throw new Error('short read');
-                if (i === 0 && String.fromCharCode(...new Uint8Array(await blob.slice(0, 4).arrayBuffer())) !== 'GGUF') throw new Error('not a model file');
-                break;
-              } catch (e) { if (ctrl.signal.aborted || ++tries >= 4) throw e; await new Promise(r => setTimeout(r, 1500 * tries)); }
-            }
-            await offline.putFile(aiPartKey(id, f, i), blob);
-            done.add(i);
-            const saved = aiMeta(id) || meta;
-            if (saved.files) saved.files[k].done = [...done]; else saved.done = [...done];
-            store.set('ai-dl-' + id, saved);
-            ai.dl.loaded += blob.size;
-            const dt = (performance.now() - t0) / 1000; if (dt > 1) ai.dl.speed = (ai.dl.loaded - b0) / dt;
-            aiProgress();
-          }
+        if (!todo.length) continue;
+        // Can this server send pieces? Try one; if not, download the whole file in one go instead.
+        let ranged = true;
+        const getPiece = async i => {
+          const start = i * meta.chunk, end = start + size(f, i) - 1;
+          const r = await fetch(f.url, { headers: { Range: `bytes=${start}-${end}` }, signal: ctrl.signal });
+          if (r.status !== 206) { const er = new Error('HTTP ' + r.status); er.noRange = r.status === 200; throw er; }
+          const blob = await r.blob(); if (blob.size !== end - start + 1) throw new Error('short read');
+          if (i === 0 && String.fromCharCode(...new Uint8Array(await blob.slice(0, 4).arrayBuffer())) !== 'GGUF') throw new Error('not a model file');
+          return blob;
         };
-        await Promise.all([worker(), worker(), worker()]);
+        try { const first = todo[0]; await markDone(k, f, done, first, await getPiece(first)); todo.shift(); }
+        catch (e) { if (ctrl.signal.aborted) throw e; if (e.noRange || e instanceof TypeError) ranged = false; else throw e; }
+        if (ranged) {
+          const worker = async () => {
+            while (todo.length) {
+              const i = todo.shift(); let blob, tries = 0;
+              for (;;) { try { blob = await getPiece(i); break; } catch (e) { if (ctrl.signal.aborted || ++tries >= 4) throw e; await new Promise(r => setTimeout(r, 1500 * tries)); } }
+              await markDone(k, f, done, i, blob);
+            }
+          };
+          await Promise.all([worker(), worker(), worker()]);
+        } else {
+          // One continuous download, saved piece by piece (pieces already saved are skipped).
+          const r = await fetch(f.url, { signal: ctrl.signal }); if (!r.ok) throw new Error('HTTP ' + r.status);
+          const rd = r.body.getReader(); let buf = [], have = 0, i = 0;
+          const flush = async () => { const blob = new Blob(buf); buf = []; have = 0; if (!done.has(i)) await markDone(k, f, done, i, blob); i++; };
+          for (;;) {
+            const { value, done: end } = await rd.read(); if (end) break;
+            let v = value;
+            while (v.length) { const need = size(f, i) - have, take = v.subarray(0, need); buf.push(take); have += take.length; v = v.subarray(take.length); if (have === size(f, i)) await flush(); }
+          }
+          if (have) await flush();
+          if (done.size < n) throw new Error('download ended early');
+        }
       }
       meta = aiMeta(id); meta.complete = true; store.set('ai-dl-' + id, meta);
       if (!m.vision || !aiTextIds().some(aiReady)) store.set('ai-model', id);   // Vision is an add-on: keep the chosen chat model
@@ -1573,11 +1610,50 @@
       ai.dl = null; toast(m.vision ? 'Vision is ready. Add a picture to try it.' : 'Globex AI is ready');
     } catch (e) {
       if (ctrl.signal.aborted) { ai.dl = null; }
-      else { console.error(e); ai.dl.error = e.message === 'blocked'
-        ? 'Couldn’t reach the AI download (Hugging Face may be blocked on this network). Try on another network, e.g. at home, or load a model file instead.'
-        : 'The download stopped (' + e.message + '). Press Download to continue where it left off.'; }
+      else {
+        console.error(e);
+        ai.dl.error = e.save || aiSaveErr(e)
+          ? 'This browser isn’t letting Globex save the AI. The device may be out of space, or a school setting may block saving. Press “Check this device” below for details.'
+          : e.message === 'blocked'
+          ? 'Couldn’t reach the AI download. Hugging Face (where AI models are hosted) may be blocked on this network. Try on another network, e.g. at home: once it’s saved it works anywhere. You can also load a model file instead.'
+          : 'The download stopped (' + e.message + '). Press the button to continue where it left off.';
+        if (e.details) ai.dl.error += '<br><small style="opacity:.75">' + e.details.replace(/[<>&]/g, '') + '</small>';
+      }
     }
     renderAIAgain();
+  }
+
+  // "Check this device": a plain-language report of what works and what doesn't.
+  async function aiDiagnose() {
+    const out = [], add = (ok, name, detail) => out.push({ ok, name, detail });
+    const wasm = b => { try { return WebAssembly.validate(new Uint8Array(b)); } catch { return false; } };
+    add(typeof WebAssembly === 'object' && wasm([0,97,115,109,1,0,0,0,1,5,1,96,0,1,123,3,2,1,0,10,10,1,8,0,65,0,253,15,253,98,11]) && wasm([0,97,115,109,1,0,0,0,1,4,1,96,0,0,3,2,1,0,10,8,1,6,0,6,64,25,11,11]),
+      'Browser can run the AI', navigator.userAgent.match(/(Chrome|Firefox|Edg|Safari)\/[\d.]+/)?.[0] || '');
+    try { await offline.putFile('ai-test', new Blob(['ok'])); const b = await offline.file('ai-test'); await offline.deleteFile('ai-test'); add(!!b, 'Can save data', ''); }
+    catch (e) { add(false, 'Can save data', 'blocked: ' + (e.name || e.message)); }
+    try { const q = await navigator.storage.estimate(); const free = (q.quota || 0) - (q.usage || 0); add(free > 1.3e9, 'Free space for the AI', fmtSize(free) + ' available' + (free < 1.3e9 ? ' (Quick needs ~0.5 GB, Smart ~1.2 GB)' : '')); }
+    catch { add(null, 'Free space for the AI', 'unknown'); }
+    const mem = navigator.deviceMemory; add(mem ? mem >= 4 : null, 'Memory', mem ? mem + ' GB' + (mem < 4 ? ' (Quick only)' : mem < 8 ? ' (Quick recommended)' : '') : 'unknown');
+    let gpu = false; try { gpu = !!(navigator.gpu && await navigator.gpu.requestAdapter()); } catch {}
+    add(gpu ? true : null, 'Graphics chip', gpu ? 'available: faster answers' : 'not available: uses the processor (slower but works)');
+    const probe = async (url, name) => { try { const c = new AbortController(); setTimeout(() => c.abort(), 8000); const r = await fetch(url, { signal: c.signal }); add(r.ok, name, r.ok ? 'reachable' : 'HTTP ' + r.status); }
+      catch (e) { add(false, name, 'blocked or offline'); } };
+    await probe(AI_ENGINE_BASES[0] + 'index.js', 'AI engine download (jsDelivr)');
+    await probe('https://huggingface.co/api/models/Qwen/Qwen2.5-0.5B-Instruct-GGUF', 'AI model download (Hugging Face)');
+    await probe('https://hf-mirror.com/api/models/Qwen/Qwen2.5-0.5B-Instruct-GGUF', 'Backup model download (hf-mirror)');
+    const saved = AI_MODELS.filter(x => aiReady(x.id)).map(x => x.name);
+    add(saved.length ? true : null, 'AI saved on this device', saved.length ? saved.join(', ') : 'none yet');
+    if (ai.lastError) add(false, 'Last error', ai.lastError);
+    return out;
+  }
+  async function aiShowDiagnose() {
+    const box = document.getElementById('aiDiag'); if (!box) return;
+    box.innerHTML = '<div class="ai-diag"><div class="spinner" style="margin:6px auto"></div></div>';
+    const res = await aiDiagnose();
+    const icon = ok => ok === true ? '<b style="color:#34d399">✓</b>' : ok === false ? '<b style="color:var(--danger)">✗</b>' : '<b style="color:var(--text-3)">–</b>';
+    box.innerHTML = `<div class="ai-diag">${res.map(r => `<div>${icon(r.ok)} <strong></strong> <span></span></div>`).join('')}<button class="btn" id="aiDiagCopy">Copy report</button></div>`;
+    box.querySelectorAll('.ai-diag > div').forEach((el, i) => { el.querySelector('strong').textContent = res[i].name; el.querySelector('span').textContent = res[i].detail ? '— ' + res[i].detail : ''; });
+    box.querySelector('#aiDiagCopy').onclick = () => navigator.clipboard.writeText(res.map(r => (r.ok === true ? '✓' : r.ok === false ? '✗' : '–') + ' ' + r.name + (r.detail ? ': ' + r.detail : '')).join('\n')).then(() => toast('Report copied'), () => toast('Couldn’t copy'));
   }
   async function aiImportFile(list) {
     const picked = [...(list || [])]; if (!picked.length) return;
@@ -1626,7 +1702,7 @@
       }
       const mod = await aiLoadEngineLib();
       const wasm = URL.createObjectURL(await aiEngineFile('wasm/wllama.wasm', 'application/wasm'));
-      const gpu = await aiHasGPU();
+      const gpu = ai.forceCPU ? false : await aiHasGPU();
       const make = () => { try { return new mod.Wllama({ default: wasm }, { suppressNativeLog: true, allowOffline: true }); }
         catch { return new mod.Wllama({ default: wasm }, { suppressNativeLog: true, allowOffline: true, cacheManager: {} }); } };
       let w = make();
@@ -1689,7 +1765,7 @@
     chat.updated = Date.now(); ai.chats = [chat, ...ai.chats.filter(c => c !== chat)]; aiSave();
     const reply = { role: 'assistant', content: '' }; chat.messages.push(reply);
     ai.busy = true; ai.ctrl = new AbortController(); renderAIAgain();
-    try {
+    for (let attempt = 0; attempt < 2; attempt++) try {
       const want = aiWant(chat); ai.failed = null;
       if (!ai.engine || ai.loadedId !== want) {
         try { await aiEnsureLoaded(want); } catch (e) { ai.failed = want; e.vision = want === aiVisionId(); throw e; }
@@ -1714,13 +1790,20 @@
         onData: c => { const d = c && c.choices && c.choices[0] && c.choices[0].delta && c.choices[0].delta.content; if (d) { reply.content += d; n++; aiStream(reply); } },
       });
       reply.speed = n / ((performance.now() - t0) / 1000);
+      break;
     } catch (e) {
       if (!(e && (e.name === 'AbortError' || e.name === 'WllamaAbortError' || /abort/i.test(e.message)))) {
         console.error(e);
+        ai.lastError = String(e && (e.message || e)).slice(0, 200);
+        if (attempt === 0 && ai.onGPU && !reply.content) {   // graphics chip trouble: retry on the processor
+          ai.forceCPU = true; try { await ai.engine.exit(); } catch {} ai.engine = null; ai.loadedId = null; ai.failed = null; continue;
+        }
         if (!reply.content) reply.content = e && e.vision
           ? '*Sorry, the Vision model couldn’t start on this device.* It may not have enough memory, or the download may be damaged. You can delete it from the model menu and download it again.'
           : '*Sorry, something went wrong running the AI on this device.* ' + (/memory|alloc/i.test(String(e && e.message)) ? 'It may not have enough memory. Try the **Quick** model in the menu above.' : 'Try again, or reload the page.');
+        if (!/Details:/.test(reply.content)) reply.content += '\n\n> Details: ' + ai.lastError.replace(/[*`_>]/g, '') + ' — pick **Check this device** in the model menu above for a full check.';
       }
+      break;
     }
     if (!reply.content) chat.messages.pop();
     ai.busy = false; ai.ctrl = null; aiSave(); renderAIAgain();
@@ -1776,10 +1859,10 @@
     const wrap = document.createElement('div'); wrap.className = 'ai' + (ai.sideOpen ? ' show-side' : '');
     const active = aiActive();
     // ---- setup (no model yet, or downloading) ----
-    if (!active || (ai.dl && ai.dl.id !== active && !ai.dl.inline)) {
+    if (!active || ai.showCheck || (ai.dl && ai.dl.id !== active && !ai.dl.inline)) {
       if (ai.gpu === null) aiHasGPU().then(renderAIAgain);
       const gpu = ai.gpu === true, mem = navigator.deviceMemory || 8;
-      const rec = gpu && mem >= 4 ? 'qwen25-15b' : 'qwen25-05b';
+      const rec = gpu && mem >= 8 ? 'qwen25-15b' : 'qwen25-05b';
       if (ai.needVision) ai.pick = AI_VISION;
       ai.pick = ai.pick || rec;
       const resume = AI_MODELS.find(m => { const x = aiMeta(m.id); return x && !x.complete && x.done && x.done.length; });
@@ -1792,7 +1875,7 @@
         <button class="btn primary ai-go" id="aiGo">${ai.dl && !ai.dl.error ? 'Pause download' : resume && resume.id === ai.pick ? 'Continue download' : aiReady(ai.pick) ? 'Use this model' : 'Download ' + aiModel(ai.pick).name + ' model'}</button>
         ${ai.dl ? `<div class="ai-prog"><div class="row2"><strong id="aiPct" style="color:var(--text)"></strong><span id="aiSize"></span></div><div class="ai-bar"><i id="aiBar"></i></div><div class="row2"><span>${ai.dl.importing ? 'Copying into this browser' : 'Saved as it downloads: safe to pause or lose Wi-Fi'}</span><span id="aiEta"></span></div></div>` : ''}
         ${ai.dl && ai.dl.error ? `<div class="ai-err">${ai.dl.error}</div>` : ''}
-        <div class="ai-alt">${active && !(ai.dl && !ai.dl.error) ? '<button id="aiBack">Back to chat</button> · ' : ''}Have the model file already? <button id="aiFile">Load it from a file</button><input type="file" id="aiFileIn" accept=".gguf" multiple hidden>
+        <div class="ai-alt">${active && !(ai.dl && !ai.dl.error) ? '<button id="aiBack">Back to chat</button> · ' : ''}<button id="aiCheck">Check this device</button> · Have the model file already? <button id="aiFile">Load it from a file</button><input type="file" id="aiFileIn" accept=".gguf" multiple hidden><div id="aiDiag"></div>
         ${!gpu ? '<br><br>No graphics chip found, so it will use the processor. That works, just a little slower.' : ''}</div></div>`;
       wrap.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { if (ai.dl && !ai.dl.error) return; ai.pick = b.dataset.m; renderAIAgain(); });
       wrap.querySelector('#aiGo').onclick = () => {
@@ -1800,7 +1883,8 @@
         if (aiReady(ai.pick)) { store.set('ai-model', ai.pick); renderAIAgain(); return; }
         aiDownload(ai.pick);
       };
-      const back = wrap.querySelector('#aiBack'); if (back) back.onclick = () => { ai.dl = null; renderAIAgain(); };
+      const back = wrap.querySelector('#aiBack'); if (back) back.onclick = () => { if (!(ai.dl && !ai.dl.error)) ai.dl = null; ai.showCheck = false; renderAIAgain(); };
+      wrap.querySelector('#aiCheck').onclick = aiShowDiagnose;
       wrap.querySelector('#aiFile').onclick = () => wrap.querySelector('#aiFileIn').click();
       wrap.querySelector('#aiFileIn').onchange = e => aiImportFile(e.target.files);
       $('rows').appendChild(wrap); aiProgress();
@@ -1819,7 +1903,7 @@
           <h2>Globex AI</h2><span class="ai-chip"><i class="${ai.busy || ai.loading ? 'busy' : ''}"></i>${m.name} · ${ai.engine ? (ai.onGPU ? 'Graphics chip' : 'Processor') : ai.loading ? 'Starting…' : 'On device'}</span>
           <span class="grow"></span>
           <select id="aiLen" aria-label="Answer length"><option value="short">Short answers</option><option value="normal">Normal answers</option><option value="long">Long answers</option></select>
-          <select id="aiModelSel" aria-label="Model">${AI_MODELS.filter(x => !x.vision).map(x => `<option value="${x.id}">${x.name}${aiReady(x.id) ? '' : ' (download)'}</option>`).join('')}${aiReady(AI_VISION) ? '<option value="__delv">Delete Vision model…</option>' : ''}${active.startsWith('file-') ? `<option value="${active}">Your model file</option>` : ''}<option value="__del">Delete this model…</option></select>
+          <select id="aiModelSel" aria-label="Model">${AI_MODELS.filter(x => !x.vision).map(x => `<option value="${x.id}">${x.name}${aiReady(x.id) ? '' : ' (download)'}</option>`).join('')}${aiReady(AI_VISION) ? '<option value="__delv">Delete Vision model…</option>' : ''}${active.startsWith('file-') ? `<option value="${active}">Your model file</option>` : ''}<option value="__check">Check this device…</option><option value="__del">Delete this model…</option></select>
         </div>
         <div class="ai-scroll" id="aiScroll"><div class="ai-col" id="aiCol"></div></div>
         <div class="ai-compose">${ai.needVision && !aiVisionId() ? `<div class="ai-need"><div class="ai-orb">${AI_ICON}</div><div><strong>Add the Vision model to understand pictures</strong><span>A one-time download of ${aiModel(AI_VISION).approx}. It’s saved on this device and works offline.</span></div>${ai.dl && ai.dl.id === AI_VISION && !ai.dl.error ? `<div class="ai-need-prog"><div class="ai-bar"><i id="aiBar"></i></div><small id="aiPct"></small><small id="aiSize" hidden></small><small id="aiEta" hidden></small></div>` : `<button class="btn primary" id="aiGetVision">${ai.dl && ai.dl.error ? 'Try again' : 'Download'}</button>`}<button class="icon-btn" id="aiNeedX" aria-label="Close">✕</button></div>${ai.dl && ai.dl.id === AI_VISION && ai.dl.error ? `<div class="ai-err" style="max-width:760px;margin:0 auto 8px">${ai.dl.error}</div>` : ''}` : ''}
@@ -1892,6 +1976,7 @@
     const ms = wrap.querySelector('#aiModelSel'); ms.value = active;
     ms.onchange = async () => {
       const v = ms.value; ms.value = active; if (ai.busy) return;
+      if (v === '__check') { ai.showCheck = true; renderAIAgain(); setTimeout(aiShowDiagnose, 0); return; }
       if (v === '__delv') { if (!confirm('Delete the Vision model from this browser? Chats with pictures will use the normal model.')) return; await aiDelete(AI_VISION); toast('Vision model deleted'); renderAIAgain(); return; }
       if (v === '__del') { if (!confirm(`Delete the ${aiModel(active).name} model from this browser? You can download it again later.`)) return; await aiDelete(active); toast('Model deleted'); renderAIAgain(); return; }
       if (aiReady(v)) { store.set('ai-model', v); renderAIAgain(); return; }
