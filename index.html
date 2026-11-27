@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<!-- Keep this line: the Globex launcher checks for it before using a download. -->
+<meta name="globex" content="site">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Globex</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%235b8cff'/%3E%3Ccircle cx='32' cy='32' r='17' fill='none' stroke='white' stroke-width='4'/%3E%3Cpath d='M15 32h34M32 15c-7 6-7 28 0 34M32 15c7 6 7 28 0 34' fill='none' stroke='white' stroke-width='3'/%3E%3C/svg%3E">
@@ -231,6 +233,8 @@
   .icon-btn { width: 36px; height: 36px; border-radius: 8px; display: grid; place-items: center; color: var(--text-2); flex-shrink: 0; transition: background .12s, color .12s; }
   .icon-btn:hover { background: var(--surface-3); color: var(--text); }
   .icon-btn.on svg { fill: var(--star); stroke: var(--star); }
+  .icon-btn.saved { color: var(--accent); background: var(--accent-soft); }
+  .icon-btn.busy { pointer-events: none; animation: pulse 1s ease-in-out infinite; }
   .stage { flex: 1; position: relative; background: #000; }
   .stage iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #000; }
   .stage .loading { position: absolute; inset: 0; padding: 0; align-content: center; }
@@ -388,13 +392,13 @@
     <div class="title"><strong><span id="pTitle"></span></strong><a id="pAuthor" target="_blank" rel="noopener"></a></div>
     <button class="icon-btn" id="pFav" title="Favorite"><svg class="i" viewBox="0 0 24 24"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2l1.1-6.2L3 9.6l6.2-.9z"/></svg></button>
     <button class="icon-btn" id="pReload" title="Restart game"><svg class="i" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6"/></svg></button>
-    <button class="icon-btn" id="pDownload" title="Download game"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg></button>
+    <button class="icon-btn" id="pSave" title="Save for offline"><svg class="i" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg></button>
     <button class="icon-btn hide-sm" id="pTab" title="Open in new tab"><svg class="i" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></button>
     <span class="sep hide-sm"></span>
     <button class="icon-btn" id="pFull" title="Fullscreen"><svg class="i" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
   </div>
   <div class="stage" id="stage">
-    <iframe id="frame" title="Game" allow="fullscreen; autoplay; gamepad; clipboard-write" allowfullscreen></iframe>
+    <iframe id="frame" title="Game" allow="fullscreen *; autoplay *; gamepad *; clipboard-write *" allowfullscreen></iframe>
     <div class="loading" id="pStatus"><div class="spinner"></div><span>Loading game…</span></div>
   </div>
 </div>
@@ -452,6 +456,29 @@
   };
   const PAGE = 120;
 
+  /* ---------- Your own games ----------
+     Games that aren't in the main list. Each needs a unique id (100001 and up),
+     a name, and "html": the game's page. Inside "html", write the closing script tag with a backslash before the slash. */
+  const CUSTOM_GAMES = [
+    {
+      id: 100001, name: 'Strike Force Heroes', author: 'Sky9 Games', special: ['flash'], featured: 1,
+      cover: coverArt('STRIKE FORCE', 'HEROES', '#450a0a', '#c2410c'),
+      html: `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Strike Force Heroes</title>
+<style>html,body{margin:0;padding:0;background:#000;overflow:hidden;height:100%;width:100%}</style>
+<script src="https://cdn.jsdelivr.net/npm/@ruffle-rs/ruffle@0.2.0-nightly.2025.10.2/ruffle.min.js"><\/script>
+</head><body>
+<embed src="https://cdn.jsdelivr.net/gh/bubbls/UGS-file-encryption@bfbcc561fbcac0ac2d0d0806d020ef414f260fbd/strike-force-heroes--14775.swf" width="100%" height="100%">
+</body></html>`,
+    },
+  ];
+  // Simple generated cover picture for custom games.
+  function coverArt(line1, line2, c1, c2) {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs><rect width="320" height="200" fill="url(#g)"/><g fill="none" stroke="rgba(255,255,255,.12)" stroke-width="2"><circle cx="250" cy="60" r="70"/><circle cx="250" cy="60" r="40"/><path d="M180 60h140M250 -10v140"/></g><text x="24" y="128" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="30" fill="#fff">${line1}</text><text x="24" y="162" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="30" fill="#fde68a">${line2}</text></svg>`;
+    return 'data:image/svg+xml,' + encodeURIComponent(svg);
+  }
+
   const $ = id => document.getElementById(id);
   const store = {
     get(k, d) { try { return JSON.parse(localStorage.getItem('globex:' + k)) ?? d; } catch { return d; } },
@@ -478,6 +505,81 @@
     if (icon) icon.href = icon.href.replace(/%23[0-9a-f]{6}(?='\/%3E%3Ccircle)/i, '%23' + a.slice(1));
   }
   applyLook();
+
+  /* =====================================================================
+     SAVED GAMES (offline)
+     Saved games live inside this browser (IndexedDB), not as separate files.
+     ===================================================================== */
+  const offline = (() => {
+    let dbp = null, ok = !!window.indexedDB;
+    const open = () => dbp || (dbp = new Promise((res, rej) => {
+      const r = indexedDB.open('globex-offline', 1);
+      r.onupgradeneeded = () => { r.result.createObjectStore('games', { keyPath: 'id' }); r.result.createObjectStore('files'); };
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    }));
+    const req = r => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+    const os = async (name, mode) => (await open()).transaction(name, mode).objectStore(name);
+    return {
+      get ok() { return ok; }, set ok(v) { ok = v; },
+      list: async () => req((await os('games', 'readonly')).getAll()),
+      get: async id => req((await os('games', 'readonly')).get(id)),
+      file: async url => req((await os('files', 'readonly')).get(url)),
+      putFile: async (url, blob) => req((await os('files', 'readwrite')).put(blob, url)),
+      putGame: async rec => req((await os('games', 'readwrite')).put(rec)),
+      async remove(id) {
+        const all = await this.list();
+        const rec = all.find(r => r.id === id); if (!rec) return;
+        const stillUsed = new Set(all.filter(r => r.id !== id).flatMap(r => r.urls));
+        await req((await os('games', 'readwrite')).delete(id));
+        for (const u of rec.urls) if (!stillUsed.has(u)) await req((await os('files', 'readwrite')).delete(u));
+      },
+    };
+  })();
+  const fmtSize = b => b >= 1e9 ? (b / 1e9).toFixed(1) + ' GB' : b >= 1e6 ? (b / 1e6).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1e3)) + ' KB';
+  // Put a snippet at the very top of a game page (after <!DOCTYPE> if it has one).
+  function injectTop(html, snippet) {
+    const m = html.match(/^\s*<!doctype[^>]*>/i);
+    return m ? m[0] + snippet + html.slice(m[0].length) : snippet + html;
+  }
+  // Online: let the browser remember every file a game loads, so it can be saved.
+  const RECORD_SNIPPET = '<script>try{performance.setResourceTimingBufferSize(100000)}catch(e){}<\/script>';
+  // Offline: runs inside a saved game and sends its file requests to the saved copies.
+  function OFFLINE_SHIM(M, N, RP) {
+    // R: saved copy -> original address, so games that look up their own address still see the real one.
+    var R = {}; for (var k0 in M) R[M[k0]] = k0;
+    var unmap = function (v) { return (v && R[v]) || v; };
+    var map = function (u) {
+      try {
+        var h = new URL(String(u), document.baseURI).href;
+        if (M[h]) return M[h];
+        var k = h.split(/[?#]/)[0]; if (M[k]) return M[k];
+        var n = k.split('/').pop(); if (N[n]) return N[n];
+      } catch (e) {}
+      return u;
+    };
+    var of = window.fetch;
+    window.fetch = function (i, o) {
+      try { if (i && typeof i === 'object' && 'url' in i) { var m = map(i.url); if (m !== i.url) i = m; } else i = map(i); } catch (e) {}
+      return of.call(window, i, o);
+    };
+    var xo = XMLHttpRequest.prototype.open;
+    XMLHttpRequest.prototype.open = function (m, u) { var a = [].slice.call(arguments); a[1] = map(u); return xo.apply(this, a); };
+    [[window.HTMLScriptElement, 'src'], [window.HTMLImageElement, 'src'], [window.HTMLMediaElement, 'src'],
+     [window.HTMLSourceElement, 'src'], [window.HTMLLinkElement, 'href']].forEach(function (p) {
+      if (!p[0]) return;
+      var d = Object.getOwnPropertyDescriptor(p[0].prototype, p[1]); if (!d || !d.set) return;
+      Object.defineProperty(p[0].prototype, p[1], { configurable: true, enumerable: d.enumerable,
+        get: function () { return unmap(d.get.call(this)); }, set: function (v) { d.set.call(this, map(v)); } });
+    });
+    var ga = Element.prototype.getAttribute;
+    Element.prototype.getAttribute = function (n) { var v = ga.call(this, n); return (n === 'src' || n === 'href') ? unmap(v) : v; };
+    var sa = Element.prototype.setAttribute;
+    Element.prototype.setAttribute = function (n, v) {
+      if ((n === 'src' || n === 'href') && /^(SCRIPT|IMG|AUDIO|VIDEO|SOURCE|LINK)$/.test(this.tagName)) v = map(v);
+      return sa.call(this, n, v);
+    };
+    if (RP) { var rp = window.RufflePlayer || {}; rp.config = Object.assign({ publicPath: RP }, rp.config || {}); window.RufflePlayer = rp; }
+  }
 
   /* ---------- SHA-256 (works everywhere, including file:// pages) ---------- */
   function sha256(str) {
@@ -578,8 +680,13 @@
   let state = { cat: 'home', q: '', sort: 'az', shown: PAGE };
   let current = null;
 
+  let savedIds = new Set(), savedMeta = new Map();
   const htmlUrls  = g => HTML_BASES.map(b => g.rawUrl.replace('{HTML_URL}', b));
-  const coverUrls = g => COVER_BASES.map(b => g.rawCover.replace('{COVER_URL}', b));
+  const coverUrls = g => {
+    const list = g.cover ? [g.cover] : g.rawCover ? COVER_BASES.map(b => g.rawCover.replace('{COVER_URL}', b)) : [];
+    const sc = savedMeta.get(g.id)?.cover;
+    return sc ? [sc, ...list] : list;
+  };
   const catOf = g => (g.special && g.special[0]) || null;
   const norm = s => s.toLowerCase().normalize('NFKD').replace(/[^a-z0-9 ]/g, '');
 
@@ -594,6 +701,7 @@
     all: '<svg class="i" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',
     favs: '<svg class="i" viewBox="0 0 24 24"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2l1.1-6.2L3 9.6l6.2-.9z"/></svg>',
     recent: '<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+    saved: '<svg class="i" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>',
   };
   const STAR = ICONS.favs;
 
@@ -648,6 +756,7 @@
   function currentList() {
     const c = state.cat;
     if (c === 'recent') return recent.map(id => byId.get(id)).filter(Boolean).filter(matchQ);
+    if (c === 'saved') return sorted(games.filter(g => savedIds.has(g.id)).filter(matchQ));
     let l = (c === 'all' || c === 'home' || c === 'settings') ? games
       : c === 'favs' ? games.filter(g => favs.has(g.id))
       : c === 'featured' ? games.filter(g => g.featured)
@@ -665,6 +774,7 @@
         ['all', 'All games', games.length, ICONS.all],
         ['favs', 'Favorites', favs.size, ICONS.favs],
         ['recent', 'Recently played', recent.length, ICONS.recent],
+        ['saved', 'Saved games', savedIds.size, ICONS.saved],
       ],
       cats: [
         ['featured', CATEGORY_LABELS.featured, games.filter(g => g.featured).length],
@@ -786,6 +896,7 @@
       <div class="set-group"><h2>Your data</h2><div class="set-card">
         <div class="set-row"><div><strong>Recently played</strong><small>${recent.length} game${recent.length === 1 ? '' : 's'}</small></div><button class="btn danger" data-clear="recent">Clear</button></div>
         <div class="set-row"><div><strong>Favorites</strong><small>${favs.size} game${favs.size === 1 ? '' : 's'}</small></div><button class="btn danger" data-clear="favs">Clear</button></div>
+        <div class="set-row"><div><strong>Saved games</strong><small>${savedIds.size} game${savedIds.size === 1 ? '' : 's'} · ${fmtSize(savedBytes())} stored in this browser</small></div><button class="btn danger" data-clear="saved">Clear</button></div>
         <div class="set-row"><div><strong>Reset appearance</strong><small>Go back to the default look</small></div><button class="btn" data-reset>Reset</button></div>
       </div></div>`;
     const save = () => { store.set('look', look); applyLook(); renderSettingsAgain(); };
@@ -793,10 +904,13 @@
     wrap.querySelectorAll('[data-accent]').forEach(b => b.onclick = () => { look.accent = b.dataset.accent; save(); });
     wrap.querySelectorAll('[data-switch]').forEach(b => b.onclick = () => { const k = b.dataset.switch; look[k] = look[k] === 'on' ? 'off' : 'on'; save(); });
     wrap.querySelector('[data-reset]').onclick = () => { look = { ...LOOK_DEFAULTS }; save(); toast('Appearance reset'); };
-    wrap.querySelectorAll('[data-clear]').forEach(b => b.onclick = () => {
+    wrap.querySelectorAll('[data-clear]').forEach(b => b.onclick = async () => {
       const what = b.dataset.clear;
-      if (!confirm(`Clear your ${what === 'favs' ? 'favorites' : 'recently played list'}? This can't be undone.`)) return;
-      if (what === 'favs') { favs = new Set(); store.set('favs', []); } else { recent = []; store.set('recent', []); }
+      const label = { favs: 'favorites', recent: 'recently played list', saved: 'saved games' }[what];
+      if (!confirm(`Clear your ${label}? This can't be undone.`)) return;
+      if (what === 'favs') { favs = new Set(); store.set('favs', []); }
+      else if (what === 'recent') { recent = []; store.set('recent', []); }
+      else { for (const id of [...savedIds]) await offline.remove(id).catch(() => {}); await loadSaved(); }
       toast('Cleared'); renderNav(); renderSettingsAgain();
     });
     $('rows').appendChild(wrap);
@@ -822,6 +936,7 @@
       $('pageSub').textContent = `${games.length.toLocaleString()} games, ready to play in your browser.`;
       renderHero();
       addRow('Continue playing', recent.slice(0, 15).map(id => byId.get(id)).filter(Boolean), 'recent');
+      addRow('Saved for offline', games.filter(g => savedIds.has(g.id)), 'saved');
       addRow('Your favorites', games.filter(g => favs.has(g.id)).slice(0, 20), 'favs');
       addRow('Featured', games.filter(g => g.featured), 'featured');
       addRow('Picks for today', dailyPicks(games.filter(g => !g.featured), 15, 7));
@@ -831,11 +946,11 @@
     }
 
     const list = currentList();
-    const titles = { all: 'All games', favs: 'Favorites', recent: 'Recently played' };
+    const titles = { all: 'All games', favs: 'Favorites', recent: 'Recently played', saved: 'Saved games' };
     $('pageTitle').textContent = state.q ? 'Search' : titles[state.cat] || CATEGORY_LABELS[state.cat] || state.cat;
     $('pageSub').textContent = state.q
       ? `${list.length} result${list.length === 1 ? '' : 's'} for “${state.q}”`
-      : `${list.length.toLocaleString()} game${list.length === 1 ? '' : 's'}`;
+      : `${list.length.toLocaleString()} game${list.length === 1 ? '' : 's'}` + (state.cat === 'saved' && list.length ? ` · ${fmtSize(savedBytes())} · play these with no internet` : '');
     $('gridHead').hidden = true;
     $('sort').disabled = state.cat === 'recent';
 
@@ -852,6 +967,7 @@
       const [t, s] = state.q ? ['No results', 'Try a different search term.']
         : state.cat === 'favs' ? ['No favorites yet', 'Select the star on any game to save it here.']
         : state.cat === 'recent' ? ['Nothing played yet', 'Games you open will appear here.']
+        : state.cat === 'saved' ? ['No saved games yet', 'Open a game, start playing, then press the save button (↓) at the top to keep it for offline play.']
         : ['No games', 'This category is empty.'];
       empty.innerHTML = `<div class="empty"><strong>${t}</strong>${s}</div>`;
     }
@@ -871,9 +987,85 @@
   /* =====================================================================
      PLAYER
      ===================================================================== */
+  const gameHtml = async g => g.html || fetchFirst(htmlUrls(g), 'text', 15000);
+
   async function loadInto(win, g) {
-    const html = await fetchFirst(htmlUrls(g), 'text', 15000);
+    let html;
+    const rec = savedIds.has(g.id) ? await offline.get(g.id).catch(() => null) : null;
+    if (rec) html = await savedHtml(rec);                  // play the saved copy
+    else html = injectTop(await gameHtml(g), RECORD_SNIPPET);
     win.document.open(); win.document.write(html); win.document.close();
+  }
+
+  // Build a saved game's page: every saved file gets a local address.
+  async function savedHtml(rec) {
+    const M = {}, N = {}, count = {};
+    for (const u of rec.urls) {
+      const blob = await offline.file(u).catch(() => null); if (!blob) continue;
+      const local = URL.createObjectURL(blob);
+      M[u] = local;
+      const name = u.split(/[?#]/)[0].split('/').pop();
+      count[name] = (count[name] || 0) + 1; N[name] = local;
+    }
+    for (const n in N) if (count[n] > 1 || !/[0-9a-f]{12,}/i.test(n)) delete N[n];   // only unique, hashed names
+    const ruffle = rec.urls.find(u => /\/ruffle(\.min)?\.js([?#]|$)/.test(u));
+    const json = v => JSON.stringify(v).replace(/</g, '\\u003c');
+    const shim = '<script>(' + OFFLINE_SHIM.toString() + ')(' + json(M) + ',' + json(N) + ',' + json(ruffle ? ruffle.replace(/[^/]*$/, '') : null) + ');<\/script>';
+    // Swap addresses written directly in the page too.
+    const baseM = rec.html.match(/<base[^>]+href\s*=\s*["']([^"']+)["']/i);
+    const html = rec.html.replace(/<(script|link|img|audio|video|source)\b[^>]*>/gi, tag =>
+      tag.replace(/\b(src|href)(\s*=\s*)(["'])(.*?)\3/i, (m, a, eq, q, v) => {
+        let abs; try { abs = new URL(v, baseM ? baseM[1] : undefined).href; } catch { return m; }
+        return M[abs] ? a + eq + q + M[abs] + q : m;
+      }));
+    return injectTop(html, shim);
+  }
+
+  // Save the game that's open: its page plus every file it has loaded so far.
+  const SKIP = /google-analytics|googletagmanager|doubleclick|googlesyndication|cloudflareinsights|mochibot|mochimedia|mochiads|\/favicon\.ico/i;
+  async function saveGame(g, win) {
+    const html = await gameHtml(g);
+    let urls = [];
+    try { urls = win.performance.getEntriesByType('resource').map(e => e.name); } catch {}
+    const cover = coverUrls(g).find(u => /^https?:/.test(u));
+    if (cover) urls.push(cover);
+    urls = [...new Set(urls)].filter(u => /^https?:/.test(u) && !SKIP.test(u));
+    let bytes = html.length, failed = 0, done = 0;
+    const okUrls = [];
+    const one = async u => {
+      try {
+        let blob = await offline.file(u).catch(() => null);
+        if (!blob) {
+          const r = await fetch(u); if (!r.ok) throw new Error(r.status);
+          blob = await r.blob(); await offline.putFile(u, blob);
+        }
+        bytes += blob.size; okUrls.push(u);
+      } catch { failed++; }
+      done++; toast(`Saving ${g.name}… ${done} of ${urls.length} files (${fmtSize(bytes)})`);
+    };
+    for (let i = 0; i < urls.length; i += 4) await Promise.all(urls.slice(i, i + 4).map(one));
+    await offline.putGame({ id: g.id, name: g.name, html, urls: okUrls, bytes, savedAt: Date.now(), cover: okUrls.includes(cover) ? cover : null });
+    try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch {}
+    return { bytes, failed, files: okUrls.length };
+  }
+
+  async function loadSaved() {
+    try {
+      const list = await offline.list();
+      for (const m of savedMeta.values()) if (m.cover) URL.revokeObjectURL(m.cover);
+      savedIds = new Set(list.map(r => r.id));
+      savedMeta = new Map(list.map(r => [r.id, { bytes: r.bytes, cover: null }]));
+      for (const r of list) if (r.cover) {
+        const b = await offline.file(r.cover).catch(() => null);
+        if (b) savedMeta.get(r.id).cover = URL.createObjectURL(b);
+      }
+    } catch (e) { console.warn('Saved games unavailable', e); offline.ok = false; }
+  }
+  const savedBytes = () => [...savedMeta.values()].reduce((a, m) => a + (m.bytes || 0), 0);
+  function updateSaveBtn() {
+    const on = !!current && savedIds.has(current.id);
+    $('pSave').classList.toggle('saved', on);
+    $('pSave').title = on ? 'Saved for offline (click to remove)' : 'Save for offline';
   }
 
   async function openGame(id, fromHash = false) {
@@ -886,6 +1078,7 @@
     a.textContent = g.author ? 'by ' + g.author : '';
     g.authorLink ? a.href = g.authorLink : a.removeAttribute('href');
     $('pFav').classList.toggle('on', favs.has(id));
+    updateSaveBtn();
     $('player').classList.add('open');
     document.body.style.overflow = 'hidden';
     recent = [id, ...recent.filter(x => x !== id)].slice(0, 30);
@@ -927,20 +1120,27 @@
     if (document.fullscreenElement) document.exitFullscreen();
     else (s.requestFullscreen || s.webkitRequestFullscreen).call(s);
   };
-  $('pDownload').onclick = async () => {
-    if (!current) return;
-    const g = current, btn = $('pDownload'); btn.disabled = true;
+  let saving = false;
+  $('pSave').onclick = async () => {
+    if (!current || saving) return;
+    const g = current, btn = $('pSave');
+    if (!offline.ok) return toast('Saving games isn’t available in this browser.');
+    if (savedIds.has(g.id)) {
+      if (!confirm(`Remove "${g.name}" from your saved games?`)) return;
+      await offline.remove(g.id).catch(() => {});
+      await loadSaved(); updateSaveBtn(); renderNav();
+      return toast('Removed from saved games');
+    }
+    saving = true; btn.classList.add('busy');
     try {
-      const html = await fetchFirst(htmlUrls(g), 'text', 30000);
-      const blob = new Blob([html], { type: 'text/html' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = g.name.replace(/[\\/:*?"<>|]+/g, '').trim() + '.html';
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(() => URL.revokeObjectURL(a.href), 10000);
-      toast('Downloaded. Open the file to play. Most games still need internet.');
-    } catch { toast('Download failed. Try again.'); }
-    btn.disabled = false;
+      const r = await saveGame(g, $('frame').contentWindow);
+      await loadSaved();
+      toast(r.failed ? `Saved (${fmtSize(r.bytes)}). ${r.failed} file${r.failed === 1 ? '' : 's'} couldn’t be saved, so parts may still need internet.`
+                     : `Saved for offline (${fmtSize(r.bytes)}). Find it in Saved games.`);
+    } catch (e) { console.error(e); toast('Saving failed. There may not be enough space.'); }
+    saving = false; btn.classList.remove('busy');
+    if (current === g) updateSaveBtn();
+    renderNav();
   };
   $('pTab').onclick = async () => {
     if (!current) return;
@@ -983,6 +1183,11 @@
      2. Games this browser has seen before (saved locally) are added back.
      3. The live lists are checked; new games are added and remembered.
      A game is never dropped just because a source removed it. */
+  const customGames = () => CUSTOM_GAMES.map(c => ({
+    id: c.id, name: c.name, author: c.author, authorLink: c.authorLink, special: c.special, featured: c.featured ? 1 : 0,
+    html: c.html, cover: c.cover, rawUrl: '', rawCover: '',
+    search: norm(c.name + ' ' + (c.author || '') + ' ' + (c.special || []).join(' ')),
+  }));
   function toGame(id, name, url, cover, author, authorLink, special, featured) {
     return {
       id, name, author, authorLink, special: special && special.length ? special : undefined,
@@ -1016,7 +1221,8 @@
     let known = [];
     try { known = JSON.parse(document.getElementById('snapshot').textContent).map(r => toGame(...r)); } catch (e) { console.error(e); }
     const saved = store.get('library', []).map(r => toGame(...r));
-    known = merge(saved, known);
+    known = merge(customGames(), merge(saved, known));
+    await loadSaved();
     setLibrary(known);
     renderNav(); render(); route();
 
@@ -1026,7 +1232,7 @@
     let live = [];
     for (const l of lists) live = merge(live, l);
     const next = merge(live, known);
-    store.set('library', next.map(rowOf));
+    store.set('library', next.filter(g => !g.html).map(rowOf));
     const changed = next.length !== games.length || next.some((g, i) => games[i].id !== g.id || games[i].name !== g.name);
     if (changed) { setLibrary(next); renderNav(); if (!current) render(); }
   }
