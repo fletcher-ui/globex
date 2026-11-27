@@ -5,7 +5,7 @@
 <!-- Keep this line: the Globex launcher checks for it before using a download. -->
 <meta name="globex" content="site">
 <!-- Version: the launcher always picks the newest copy it can reach. Raise this number with every update. -->
-<meta name="globex-version" content="202611272000">
+<meta name="globex-version" content="202611272215">
 <!-- Optional extra addresses for this file (space-separated). The launcher remembers them and tries them first next time. -->
 <meta name="globex-mirrors" content="">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -132,6 +132,7 @@
   .nav-item:hover { background: var(--surface-2); color: var(--text); }
   .nav-item.active { background: var(--accent-soft); color: var(--text); }
   .nav-item.active svg { color: var(--accent); }
+  .nav-item[data-k=ai] .count { opacity: 1 !important; color: var(--accent); }
   .nav-item .count { margin-left: auto; font-size: 12px; color: var(--text-3); font-variant-numeric: tabular-nums; opacity: 0; transition: opacity .12s; }
   .nav-item:hover .count, .nav-item.active .count { opacity: 1; }
   .nav-item .dot { display: none; }
@@ -396,6 +397,8 @@
   .ai-prog .row2 { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-3); }
   .ai-alt { text-align: center; margin-top: 18px; font-size: 13px; color: var(--text-3); }
   .ai-alt button { color: var(--accent); text-decoration: underline; }
+  .ai-share { max-width: 560px; margin: 16px auto 0; padding: 12px 14px; border-radius: 12px; background: var(--surface); border: 1px solid var(--hairline); line-height: 1.6; }
+  .ai-share strong { color: var(--text); } .ai-share em { font-style: normal; color: var(--text); }
   .ai-diag { margin: 16px auto 0; max-width: 560px; text-align: left; background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px; padding: 14px 16px; display: grid; gap: 7px; font-size: 13px; color: var(--text); }
   .ai-diag span { color: var(--text-3); } .ai-diag .btn { justify-self: start; margin-top: 6px; height: 32px; font-size: 13px; }
   .ai-err { margin-top: 14px; padding: 12px 14px; border-radius: 10px; background: rgba(248,113,113,.1); color: var(--danger); font-size: 13px; }
@@ -627,7 +630,7 @@
     blue:   ['#5b8cff', '#7aa2ff'], purple: ['#8b5cf6', '#a78bfa'], green: ['#10b981', '#34d399'],
     orange: ['#f97316', '#fb923c'], pink:   ['#ec4899', '#f472b6'], red:    ['#ef4444', '#f87171'],
   };
-  const LOOK_DEFAULTS = { theme: 'dark', accent: 'blue', size: 'medium', labels: 'on', motion: 'on' };
+  const LOOK_DEFAULTS = { theme: 'dark', accent: 'blue', size: 'medium', labels: 'on', motion: 'on', autoAI: 'on' };
   let look = { ...LOOK_DEFAULTS, ...store.get('look', {}) };
   function applyLook() {
     const r = document.documentElement;
@@ -801,7 +804,7 @@
   let booted = false;
   function unlock() {
     $('gate').hidden = true; $('app').hidden = false;
-    if (!booted) { booted = true; loadLibrary(); }
+    if (!booted) { booted = true; loadLibrary(); startAutoTasks(); }
   }
   $('lockBtn').onclick = () => { store.del('unlocked'); location.reload(); };
 
@@ -924,7 +927,7 @@
   }
   function navButton([key, label, n, icon]) {
     const b = document.createElement('button');
-    b.className = 'nav-item' + (state.cat === key ? ' active' : '');
+    b.className = 'nav-item' + (state.cat === key ? ' active' : ''); b.dataset.k = key;
     b.innerHTML = `${icon || '<span class="dot"></span>'}<span class="lbl"></span><span class="count">${n}</span>`;
     b.querySelector('.lbl').textContent = label;
     b.onclick = () => setCat(key);
@@ -1033,11 +1036,17 @@
         <div class="set-row"><div><strong>Category labels</strong><small>Show the category under each game</small></div>${sw('labels')}</div>
         <div class="set-row"><div><strong>Animations</strong><small>Hover effects and transitions</small></div>${sw('motion')}</div>
       </div></div>
+      <div class="set-group"><h2>Globex AI</h2><div class="set-card">
+        <div class="set-row"><div><strong>Get Globex AI automatically</strong><small>Downloads it in the background whenever the network allows (like at home), so it’s ready offline at school</small></div>${sw('autoAI')}</div>
+      </div></div>
       <div class="set-group"><h2>Your data</h2><div class="set-card">
         <div class="set-row"><div><strong>Recently played</strong><small>${recent.length} game${recent.length === 1 ? '' : 's'}</small></div><button class="btn danger" data-clear="recent">Clear</button></div>
         <div class="set-row"><div><strong>Favorites</strong><small>${favs.size} game${favs.size === 1 ? '' : 's'}</small></div><button class="btn danger" data-clear="favs">Clear</button></div>
         <div class="set-row"><div><strong>Saved games</strong><small>${savedIds.size} game${savedIds.size === 1 ? '' : 's'} · ${fmtSize(savedBytes())} stored in this browser</small></div><button class="btn danger" data-clear="saved">Clear</button></div>
         <div class="set-row"><div><strong>Reset appearance</strong><small>Go back to the default look</small></div><button class="btn" data-reset>Reset</button></div>
+      </div></div>
+      <div class="set-group"><h2>About</h2><div class="set-card">
+        <div class="set-row"><div><strong>Globex version</strong><small>${(() => { const v = (document.querySelector('meta[name=globex-version]') || {}).content || ''; return v.length === 12 ? new Date(+v.slice(0, 4), +v.slice(4, 6) - 1, +v.slice(6, 8), +v.slice(8, 10), +v.slice(10, 12)).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) + ' (' + v + ')' : 'unknown'; })()}</small></div></div>
       </div></div>`;
     const save = () => { store.set('look', look); applyLook(); renderSettingsAgain(); };
     wrap.querySelectorAll('.seg').forEach(g => g.querySelectorAll('button').forEach(b => b.onclick = () => { look[g.dataset.key] = b.dataset.v; save(); }));
@@ -1528,10 +1537,10 @@
     const err = new Error('blocked'); err.details = errs.join(' · '); throw err;
   }
   const aiSaveErr = e => /quota|space|SecurityError|not allowed|denied|UnknownError|InvalidState/i.test(String(e && (e.name + ' ' + e.message)));
-  async function aiDownload(id, inline) {
+  async function aiDownload(id, inline, bg) {
     const m = aiModel(id);
     const ctrl = new AbortController();
-    ai.dl = { id, ctrl, loaded: 0, total: 0, speed: 0, error: null, inline: !!inline };
+    ai.dl = { id, ctrl, loaded: 0, total: 0, speed: 0, error: null, inline: !!inline, bg: !!bg };
     renderAIAgain();
     try {
       try { await offline.putFile('ai-test', new Blob(['ok'])); await offline.deleteFile('ai-test'); }   // can this browser save at all?
@@ -1610,6 +1619,7 @@
       ai.dl = null; toast(m.vision ? 'Vision is ready. Add a picture to try it.' : 'Globex AI is ready');
     } catch (e) {
       if (ctrl.signal.aborted) { ai.dl = null; }
+      else if (bg && state.cat !== 'ai') { console.warn('Background AI download paused:', e && e.message); ai.dl = null; }   // quietly try again later
       else {
         console.error(e);
         ai.dl.error = e.save || aiSaveErr(e)
@@ -1620,7 +1630,34 @@
         if (e.details) ai.dl.error += '<br><small style="opacity:.75">' + e.details.replace(/[<>&]/g, '') + '</small>';
       }
     }
-    renderAIAgain();
+    renderAIAgain(); renderNav();
+  }
+
+  // Share the AI: save it from this browser as a file, so other laptops can load it with no internet at all.
+  async function aiExport(id) {
+    const meta = aiMeta(id); if (!meta || !meta.complete) return toast('That model isn’t saved on this laptop yet.');
+    const files = aiFiles(meta), name = aiModel(id).name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    toast('Preparing the AI file…');
+    for (let k = 0; k < files.length; k++) {
+      const f = files[k], n = Math.ceil(f.total / meta.chunk), parts = [];
+      for (let i = 0; i < n; i++) { const b = await offline.file(aiPartKey(id, f, i)); if (!b) return toast('Part of the AI is missing. Delete and download it again.'); parts.push(b); }
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob(parts, { type: 'application/octet-stream' }));
+      a.download = `globex-ai-${name}${k ? '-mmproj' : ''}.gguf`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 120000);
+    }
+    toast(files.length > 1 ? 'Saving 2 files. Load BOTH on the other laptop.' : 'Saving the AI file. On another laptop: Globex AI → Load it from a file.');
+  }
+  // Get the AI file straight from the model site (e.g. at home), to load on laptops at school.
+  async function aiGetFile(id) {
+    const m = aiModel(id), c = new AbortController();
+    toast('Finding the AI file…');
+    try {
+      const groups = await aiResolve(m, c.signal);
+      groups.forEach((g, k) => setTimeout(() => { const a = document.createElement('a'); a.href = g[0] + '?download=true'; a.target = '_blank'; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); }, k * 800));
+      toast(groups.length > 1 ? 'Downloading 2 files. Keep both.' : 'Downloading the AI file. Keep it to load on other laptops.');
+    } catch { toast('Couldn’t reach the AI download on this network. Try at home.'); }
   }
 
   // "Check this device": a plain-language report of what works and what doesn't.
@@ -1839,7 +1876,9 @@
 
   /* ---------- Globex AI page ---------- */
   function aiProgress() {
-    const d = ai.dl; if (!d || !$('aiBar')) return;
+    const d = ai.dl;
+    document.querySelectorAll('.nav-item[data-k="ai"] .count').forEach(el => { el.textContent = d && d.total && !d.error ? Math.floor(d.loaded / d.total * 100) + '%' : ''; });
+    if (!d || !$('aiBar')) return;
     const pct = d.total ? d.loaded / d.total * 100 : 0;
     $('aiBar').style.width = pct.toFixed(1) + '%';
     $('aiPct').textContent = d.importing ? `Saving… ${Math.floor(pct)}%` : `Downloading… ${Math.floor(pct)}%`;
@@ -1875,7 +1914,8 @@
         <button class="btn primary ai-go" id="aiGo">${ai.dl && !ai.dl.error ? 'Pause download' : resume && resume.id === ai.pick ? 'Continue download' : aiReady(ai.pick) ? 'Use this model' : 'Download ' + aiModel(ai.pick).name + ' model'}</button>
         ${ai.dl ? `<div class="ai-prog"><div class="row2"><strong id="aiPct" style="color:var(--text)"></strong><span id="aiSize"></span></div><div class="ai-bar"><i id="aiBar"></i></div><div class="row2"><span>${ai.dl.importing ? 'Copying into this browser' : 'Saved as it downloads: safe to pause or lose Wi-Fi'}</span><span id="aiEta"></span></div></div>` : ''}
         ${ai.dl && ai.dl.error ? `<div class="ai-err">${ai.dl.error}</div>` : ''}
-        <div class="ai-alt">${active && !(ai.dl && !ai.dl.error) ? '<button id="aiBack">Back to chat</button> · ' : ''}<button id="aiCheck">Check this device</button> · Have the model file already? <button id="aiFile">Load it from a file</button><input type="file" id="aiFileIn" accept=".gguf" multiple hidden><div id="aiDiag"></div>
+        <div class="ai-alt">${active && !(ai.dl && !ai.dl.error) ? '<button id="aiBack">Back to chat</button> · ' : ''}<button id="aiCheck">Check this device</button> · Have the AI file already? <button id="aiFile">Load it from a file</button><input type="file" id="aiFileIn" accept=".gguf" multiple hidden>
+        <div class="ai-share"><strong>No AI download at school?</strong> Get the AI as a file once (at home, or from a laptop that already has it: model menu → <em>Save AI as a file</em>), put it on Google Drive or a USB stick, then use <em>Load it from a file</em> here. That needs no internet at all.<br><button id="aiGetFile">Download the ${aiModel(ai.pick).name} AI file</button></div><div id="aiDiag"></div>
         ${!gpu ? '<br><br>No graphics chip found, so it will use the processor. That works, just a little slower.' : ''}</div></div>`;
       wrap.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { if (ai.dl && !ai.dl.error) return; ai.pick = b.dataset.m; renderAIAgain(); });
       wrap.querySelector('#aiGo').onclick = () => {
@@ -1885,6 +1925,7 @@
       };
       const back = wrap.querySelector('#aiBack'); if (back) back.onclick = () => { if (!(ai.dl && !ai.dl.error)) ai.dl = null; ai.showCheck = false; renderAIAgain(); };
       wrap.querySelector('#aiCheck').onclick = aiShowDiagnose;
+      wrap.querySelector('#aiGetFile').onclick = () => aiGetFile(ai.pick);
       wrap.querySelector('#aiFile').onclick = () => wrap.querySelector('#aiFileIn').click();
       wrap.querySelector('#aiFileIn').onchange = e => aiImportFile(e.target.files);
       $('rows').appendChild(wrap); aiProgress();
@@ -1903,7 +1944,7 @@
           <h2>Globex AI</h2><span class="ai-chip"><i class="${ai.busy || ai.loading ? 'busy' : ''}"></i>${m.name} · ${ai.engine ? (ai.onGPU ? 'Graphics chip' : 'Processor') : ai.loading ? 'Starting…' : 'On device'}</span>
           <span class="grow"></span>
           <select id="aiLen" aria-label="Answer length"><option value="short">Short answers</option><option value="normal">Normal answers</option><option value="long">Long answers</option></select>
-          <select id="aiModelSel" aria-label="Model">${AI_MODELS.filter(x => !x.vision).map(x => `<option value="${x.id}">${x.name}${aiReady(x.id) ? '' : ' (download)'}</option>`).join('')}${aiReady(AI_VISION) ? '<option value="__delv">Delete Vision model…</option>' : ''}${active.startsWith('file-') ? `<option value="${active}">Your model file</option>` : ''}<option value="__check">Check this device…</option><option value="__del">Delete this model…</option></select>
+          <select id="aiModelSel" aria-label="Model">${AI_MODELS.filter(x => !x.vision).map(x => `<option value="${x.id}">${x.name}${aiReady(x.id) ? '' : ' (download)'}</option>`).join('')}${aiReady(AI_VISION) ? '<option value="__delv">Delete Vision model…</option>' : ''}${active.startsWith('file-') ? `<option value="${active}">Your model file</option>` : ''}<option value="__share">Save AI as a file (to share)…</option><option value="__check">Check this device…</option><option value="__del">Delete this model…</option></select>
         </div>
         <div class="ai-scroll" id="aiScroll"><div class="ai-col" id="aiCol"></div></div>
         <div class="ai-compose">${ai.needVision && !aiVisionId() ? `<div class="ai-need"><div class="ai-orb">${AI_ICON}</div><div><strong>Add the Vision model to understand pictures</strong><span>A one-time download of ${aiModel(AI_VISION).approx}. It’s saved on this device and works offline.</span></div>${ai.dl && ai.dl.id === AI_VISION && !ai.dl.error ? `<div class="ai-need-prog"><div class="ai-bar"><i id="aiBar"></i></div><small id="aiPct"></small><small id="aiSize" hidden></small><small id="aiEta" hidden></small></div>` : `<button class="btn primary" id="aiGetVision">${ai.dl && ai.dl.error ? 'Try again' : 'Download'}</button>`}<button class="icon-btn" id="aiNeedX" aria-label="Close">✕</button></div>${ai.dl && ai.dl.id === AI_VISION && ai.dl.error ? `<div class="ai-err" style="max-width:760px;margin:0 auto 8px">${ai.dl.error}</div>` : ''}` : ''}
@@ -1976,6 +2017,7 @@
     const ms = wrap.querySelector('#aiModelSel'); ms.value = active;
     ms.onchange = async () => {
       const v = ms.value; ms.value = active; if (ai.busy) return;
+      if (v === '__share') { aiExport(active); if (aiReady(AI_VISION) && active !== AI_VISION && confirm('Also save the Vision (pictures) model as files?')) setTimeout(() => aiExport(AI_VISION), 1500); return; }
       if (v === '__check') { ai.showCheck = true; renderAIAgain(); setTimeout(aiShowDiagnose, 0); return; }
       if (v === '__delv') { if (!confirm('Delete the Vision model from this browser? Chats with pictures will use the normal model.')) return; await aiDelete(AI_VISION); toast('Vision model deleted'); renderAIAgain(); return; }
       if (v === '__del') { if (!confirm(`Delete the ${aiModel(active).name} model from this browser? You can download it again later.`)) return; await aiDelete(active); toast('Model deleted'); renderAIAgain(); return; }
@@ -1988,6 +2030,68 @@
     if (!ai.busy && matchMedia('(hover: hover)').matches) input.focus();
   }
   aiHasGPU();
+
+  /* =====================================================================
+     RUNS BY ITSELF
+     1. Keeps Globex up to date: finds the newest version, saves it on this
+        laptop for the launcher, and switches to it at a safe moment.
+     2. Tells jsDelivr to refresh if it's still handing out an old copy.
+     3. Downloads Globex AI in the background whenever the network allows,
+        so it's already saved before the laptop goes to school.
+     ===================================================================== */
+  const SITE_VER = +((document.querySelector('meta[name=globex-version]') || {}).content || 0);
+  const verOf = h => { const m = h && h.match(/name="globex-version" content="(\d+)"/); return m ? +m[1] : 0; };
+  const isSite = h => typeof h === 'string' && h.includes('name="globex" content="site"');
+  async function fetchText(u, ms) {
+    const c = new AbortController(), t = setTimeout(() => c.abort(), ms);
+    try { const r = await fetch(u, { cache: 'no-store', signal: c.signal }); if (!r.ok) throw new Error(r.status); return await r.text(); }
+    finally { clearTimeout(t); }
+  }
+  const openedAt = Date.now();
+  async function autoUpdate() {
+    if (navigator.onLine === false) return;
+    let sha = null, newest = null;
+    for (const [u, pick] of [[`https://api.github.com/repos/${REPO}/branches/${BRANCH}`, j => j.commit && j.commit.sha],
+                             [`https://data.jsdelivr.com/v1/packages/gh/${REPO}/resolved?specifier=${BRANCH}`, j => j.version]]) {
+      try { const s = pick(JSON.parse(await fetchText(u, 6000))); if (/^[0-9a-f]{40}$/.test(s || '')) { sha = s; break; } } catch {}
+    }
+    const urls = [...(sha ? [`https://cdn.jsdelivr.net/gh/${REPO}@${sha}/index.html`] : []), `https://raw.githubusercontent.com/${REPO}/${BRANCH}/index.html`];
+    for (const u of urls) { try { const h = await fetchText(u, 15000); if (isSite(h) && (!newest || verOf(h) > verOf(newest))) newest = h; } catch {} }
+    // jsDelivr still serving an old copy? Ask it to refresh (at most every 6 hours).
+    try {
+      const b = await fetchText(`https://cdn.jsdelivr.net/gh/${REPO}@${BRANCH}/index.html`, 15000);
+      const best = Math.max(SITE_VER, newest ? verOf(newest) : 0);
+      if (verOf(isSite(b) ? b : '') < best && Date.now() - store.get('purgedAt', 0) > 6 * 3600e3) {
+        store.set('purgedAt', Date.now());
+        fetch(`https://purge.jsdelivr.net/gh/${REPO}@${BRANCH}/index.html`, { mode: 'no-cors' }).catch(() => {});
+      }
+    } catch {}
+    if (!newest || verOf(newest) <= SITE_VER) return;
+    try { localStorage.setItem('globex:siteCopy', newest); } catch { return; }   // the launcher opens this next time
+    // Switch now only if Globex was just opened and nothing is in progress; never loop.
+    const tried = store.get('updateTried', {});
+    const recent = tried.v === verOf(newest) && Date.now() - tried.t < 10 * 60e3;
+    const busy = current || ai.busy || (ai.dl && !ai.dl.error) || /INPUT|TEXTAREA/.test(document.activeElement && document.activeElement.tagName || '');
+    if (!recent && !busy && Date.now() - openedAt < 60000) {
+      store.set('updateTried', { v: verOf(newest), t: Date.now() });
+      toast('Updating Globex…'); setTimeout(() => location.reload(), 900);
+    }
+  }
+  async function aiAuto() {
+    if (look.autoAI !== 'on' || aiActive() || ai.dl || navigator.onLine === false) return;
+    if (Date.now() - (ai.bgTried || 0) < 30 * 60e3) return;
+    ai.bgTried = Date.now();
+    try { const q = await navigator.storage.estimate(); if ((q.quota || 0) - (q.usage || 0) < 1.5e9) return; } catch {}
+    const gpu = await aiHasGPU(), mem = navigator.deviceMemory || 8;
+    aiDownload(gpu && mem >= 8 ? 'qwen25-15b' : 'qwen25-05b', false, true);
+  }
+  function startAutoTasks() {
+    setTimeout(() => autoUpdate().catch(() => {}), 3000);
+    setInterval(() => autoUpdate().catch(() => {}), 30 * 60e3);
+    setTimeout(() => aiAuto().catch(() => {}), 20000);
+    setInterval(() => aiAuto().catch(() => {}), 10 * 60e3);
+    window.addEventListener('online', () => { autoUpdate().catch(() => {}); ai.bgTried = 0; aiAuto().catch(() => {}); });
+  }
 
   gate();
 })();
