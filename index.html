@@ -132,6 +132,7 @@
   .nav-item:hover .count, .nav-item.active .count { opacity: 1; }
   .nav-item .dot { display: none; }
   aside .spacer { flex: 1; min-height: 16px; }
+  aside > *, aside nav > * { flex-shrink: 0; }   /* never squash buttons; the sidebar scrolls instead */
 
   .content { min-width: 0; display: flex; flex-direction: column; }
   .topbar {
@@ -360,17 +361,31 @@
   .ai-sugg button:hover { background: var(--surface-2); transform: translateY(-1px); }
   .ai-sugg strong { display: block; font-size: 13.5px; font-weight: 500; } .ai-sugg span { font-size: 12.5px; color: var(--text-3); }
   /* setup */
-  .ai-setup { max-width: 720px; margin: 0 auto; padding: 4vh 20px 40px; overflow-y: auto; }
+  .ai-setup { max-width: 860px; margin: 0 auto; padding: 4vh 20px 40px; overflow-y: auto; }
   .ai-setup .ai-empty { padding-top: 0; }
   .ai-feats { display: flex; justify-content: center; gap: 18px; flex-wrap: wrap; margin: -6px 0 28px; color: var(--text-2); font-size: 13px; }
   .ai-feats span { display: inline-flex; align-items: center; gap: 6px; } .ai-feats svg { width: 15px; height: 15px; color: #34d399; }
-  .ai-models { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .ai-models { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
   .ai-model { text-align: left; padding: 18px; border-radius: 14px; background: var(--surface); border: 2px solid var(--hairline); transition: border-color .15s; position: relative; }
   .ai-model:hover { border-color: var(--border-strong); } .ai-model.on { border-color: var(--accent); }
   .ai-model strong { font-size: 16px; } .ai-model .sz { float: right; font-size: 12px; color: var(--text-3); }
   .ai-model p { margin: 6px 0 0; color: var(--text-2); font-size: 13px; } .ai-model small { display: block; margin-top: 8px; color: var(--text-3); font-size: 12px; }
   .ai-model .rec { position: absolute; top: -10px; left: 14px; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--accent); color: #fff; }
   .ai-go { width: 100%; height: 46px; font-size: 15px; }
+  /* pictures */
+  .ai-attach { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; color: var(--text-3); flex-shrink: 0; margin-left: -8px; }
+  .ai-attach:hover { background: var(--surface-2); color: var(--text); } .ai-attach svg { width: 20px; height: 20px; }
+  .ai-pend { position: relative; max-width: 760px; margin: 0 auto 8px; }
+  .ai-pend img { height: 84px; max-width: 160px; object-fit: cover; border-radius: 12px; border: 1px solid var(--border); display: block; }
+  .ai-pend button { position: absolute; top: -6px; left: 70px; width: 22px; height: 22px; border-radius: 50%; background: var(--surface-3); color: var(--text); font-size: 11px; border: 2px solid var(--bg); }
+  .ai-ucol { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; max-width: 80%; }
+  .ai-ucol .ai-bubble { max-width: 100%; }
+  .ai-uimg { max-width: min(320px, 100%); max-height: 260px; border-radius: 14px; border: 1px solid var(--hairline); cursor: zoom-in; display: block; }
+  .ai-need { display: flex; align-items: center; gap: 14px; max-width: 760px; margin: 0 auto 10px; padding: 14px 16px; border-radius: 14px; background: linear-gradient(120deg, var(--accent-soft), rgba(167,139,250,.12)); border: 1px solid var(--hairline); }
+  .ai-need .ai-orb { width: 40px; height: 40px; border-radius: 12px; margin: 0; box-shadow: none; flex-shrink: 0; } .ai-need .ai-orb svg { width: 20px; height: 20px; }
+  .ai-need > div:nth-child(2) { flex: 1; min-width: 0; } .ai-need strong { display: block; font-size: 14px; } .ai-need span { font-size: 12.5px; color: var(--text-2); }
+  .ai-need-prog { width: 160px; flex-shrink: 0; } .ai-need-prog .ai-bar { margin: 0 0 4px; } .ai-need-prog small { font-size: 11.5px; color: var(--text-3); }
+  .ai-main.drop::after { content: "Drop the picture here"; position: absolute; inset: 10px; z-index: 6; display: grid; place-items: center; border: 2px dashed var(--accent); border-radius: 16px; background: var(--accent-soft); color: var(--text); font-weight: 600; }
   .ai-prog { margin-top: 16px; background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px; padding: 16px; }
   .ai-bar { height: 8px; border-radius: 999px; background: var(--surface-3); overflow: hidden; margin: 10px 0 8px; }
   .ai-bar i { display: block; height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, var(--accent), #a78bfa); transition: width .3s; }
@@ -387,7 +402,7 @@
   @media (max-width: 900px) {
     .ai { grid-template-columns: 1fr; margin: -20px -16px -40px; height: calc(100vh - 150px); }
     .ai-side { display: none; } .ai.show-side .ai-side { display: flex; position: absolute; z-index: 5; inset: 0 30% 0 0; background: var(--bg); }
-    .ai-models, .ai-sugg { grid-template-columns: 1fr; }
+    .ai-models, .ai-sugg { grid-template-columns: 1fr; } .ai-need { flex-wrap: wrap; } .ai-need-prog { width: 100%; }
     .ai-scroll { padding: 16px 14px 8px; } .ai-compose { padding: 6px 12px 12px; }
     .ai-top { flex-wrap: wrap; padding: 10px 12px; gap: 8px; } .ai-top h2, .ai-top .grow { display: none; }
     .ai-top select { flex: 1 1 40%; min-width: 0; height: 32px; font-size: 13px; }
@@ -418,7 +433,7 @@
 
 <!-- ================= Password gate ================= -->
 <div id="gate">
-  <form class="gate-card" id="gateForm" autocomplete="off">
+  <form class="gate-card" id="gateForm" autocomplete="off" onsubmit="return false">
     <div class="logo"><span class="logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c-3.2 2.6-3.2 14.4 0 17M12 3.5c3.2 2.6 3.2 14.4 0 17"/></svg></span>Globex</div>
     <h1>Enter password</h1>
     <p>This site is private. Enter the access password to continue.</p>
@@ -874,7 +889,7 @@
     if (c === 'recent') return recent.map(id => byId.get(id)).filter(Boolean).filter(matchQ);
     if (c === 'saved') return sorted([...games, ...apps].filter(g => savedIds.has(g.id)).filter(matchQ));
     if (c === 'apps') return sorted(apps.filter(matchQ));
-    let l = (c === 'all' || c === 'home' || c === 'settings') ? (state.q ? [...games, ...apps] : games)
+    let l = (c === 'all' || c === 'home' || c === 'settings' || c === 'ai') ? (state.q ? [...games, ...apps] : games)
       : c === 'favs' ? [...games, ...apps].filter(g => favs.has(g.id))
       : c === 'featured' ? games.filter(g => g.featured)
       : games.filter(g => (g.special || []).includes(c));
@@ -1403,7 +1418,13 @@
     { id: 'qwen25-15b', name: 'Smart', label: 'Qwen 2.5 · 1.5B', approx: '≈ 1.1 GB',
       desc: 'Noticeably smarter answers, homework help and writing. Best with a graphics chip.', speed: 'Smarter',
       sources: [...HF('Qwen/Qwen2.5-1.5B-Instruct-GGUF', 'qwen2.5-1.5b-instruct-q4_k_m.gguf'), ...HF('bartowski/Qwen2.5-1.5B-Instruct-GGUF', 'Qwen2.5-1.5B-Instruct-Q4_K_M.gguf')] },
+    { id: 'smolvlm-500m', name: 'Vision', label: 'SmolVLM · 0.5B', approx: '≈ 550 MB', vision: true,
+      desc: 'Can look at pictures and talk about them. Used automatically when you add a picture.', speed: 'Sees pictures',
+      // File names are looked up from the model page, so a renamed file doesn't break the download.
+      repos: ['ggml-org/SmolVLM-500M-Instruct-GGUF', 'ggml-org/SmolVLM2-500M-Video-Instruct-GGUF', 'ggml-org/SmolVLM-256M-Instruct-GGUF'] },
   ];
+  const AI_VISION = 'smolvlm-500m';
+  const AI_VISION_SYSTEM = 'You are Globex AI. When the user shares a picture, look carefully and describe or answer questions about it clearly and briefly. If you cannot tell something from the picture, say so.';
   const AI_SYSTEM = 'You are Globex AI, a friendly and helpful assistant built into the Globex website. ' +
     'Give clear, accurate, well-organised answers. Keep them concise unless asked for detail, and use Markdown ' +
     '(short paragraphs, bullet lists, **bold** for key points, code blocks for code). If you are not sure about ' +
@@ -1432,7 +1453,12 @@
   };
   const aiMeta = id => store.get('ai-dl-' + id, null);
   const aiReady = id => { const m = aiMeta(id); return !!(m && m.complete); };
-  const aiActive = () => { const id = store.get('ai-model', null); return id && aiReady(id) ? id : AI_MODELS.map(m => m.id).find(aiReady) || null; };
+  const aiTextIds = () => AI_MODELS.filter(m => !m.vision).map(m => m.id);
+  const aiActive = () => { const id = store.get('ai-model', null); return id && aiReady(id) ? id : [...aiTextIds(), AI_VISION].find(aiReady) || null; };
+  // A model is one or more files (a vision model = model + "mmproj" picture reader).
+  // Older single-file downloads keep their original piece names.
+  const aiFiles = meta => meta.files ? meta.files.map((f, k) => ({ ...f, prefix: `f${k}:` })) : [{ ...meta, prefix: '' }];
+  const aiPartKey = (id, f, i) => `ai:${id}:${f.prefix}${i}`;
   const aiModel = id => AI_MODELS.find(m => m.id === id) || { id, name: 'Custom', label: 'Your model file' };
 
   async function aiHasGPU() {
@@ -1475,53 +1501,76 @@
     if (!total) throw new Error('size unknown');
     return { total, ranged: r.status === 206 };
   }
-  async function aiDownload(id) {
+  async function aiResolve(m, signal) {
+    if (!m.repos) return [m.sources];
+    for (const repo of m.repos) for (const host of ['https://huggingface.co', 'https://hf-mirror.com']) {
+      try {
+        const r = await fetch(`${host}/api/models/${repo}`, { signal }); if (!r.ok) throw new Error(r.status);
+        const all = ((await r.json()).siblings || []).map(x => x.rfilename).filter(f => /\.gguf$/i.test(f));
+        const pick = (list, prefs) => prefs.map(p => list.find(f => f.toLowerCase().includes(p))).find(Boolean) || list[0];
+        const mm = pick(all.filter(f => /mmproj/i.test(f)), ['q8_0', 'f16']), md = pick(all.filter(f => !/mmproj/i.test(f)), ['q8_0', 'q4_k_m', 'f16']);
+        if (mm && md) return [HF(repo, md), HF(repo, mm)];
+      } catch (e) { if (signal.aborted) throw e; }
+    }
+    throw new Error('blocked');
+  }
+  async function aiDownload(id, inline) {
     const m = aiModel(id);
     const ctrl = new AbortController();
-    ai.dl = { id, ctrl, loaded: 0, total: 0, speed: 0, error: null };
+    ai.dl = { id, ctrl, loaded: 0, total: 0, speed: 0, error: null, inline: !!inline };
     renderAIAgain();
     try {
       let meta = aiMeta(id);
-      if (!meta || !meta.url) {
-        let found = null, errs = [];
-        for (const url of m.sources) {
-          try { const p = await aiProbe(url, ctrl.signal); if (!p.ranged) throw new Error('no resume support'); found = { url, total: p.total }; break; }
-          catch (e) { if (ctrl.signal.aborted) throw e; errs.push(e.message); }
+      if (!meta || !(meta.files || meta.url)) {
+        const groups = await aiResolve(m, ctrl.signal), files = [];
+        for (const sources of groups) {
+          let found = null;
+          for (const url of sources) {
+            try { const p = await aiProbe(url, ctrl.signal); if (!p.ranged) throw new Error('no resume support'); found = { url, total: p.total, done: [] }; break; }
+            catch (e) { if (ctrl.signal.aborted) throw e; }
+          }
+          if (!found) throw new Error('blocked');
+          files.push(found);
         }
-        if (!found) throw new Error('blocked');
-        meta = { url: found.url, total: found.total, chunk: AI_CHUNK, done: [] };
+        meta = { files, chunk: AI_CHUNK };
         store.set('ai-dl-' + id, meta);
       }
-      const n = Math.ceil(meta.total / meta.chunk), done = new Set(meta.done);
-      ai.dl.total = meta.total;
-      const size = i => Math.min(meta.chunk, meta.total - i * meta.chunk);
-      ai.dl.loaded = [...done].reduce((a, i) => a + size(i), 0);
-      const todo = [...Array(n).keys()].filter(i => !done.has(i));
-      let t0 = performance.now(), b0 = ai.dl.loaded;
-      const worker = async () => {
-        while (todo.length) {
-          const i = todo.shift(), start = i * meta.chunk, end = start + size(i) - 1;
-          let blob, tries = 0;
-          for (;;) {
-            try {
-              const r = await fetch(meta.url, { headers: { Range: `bytes=${start}-${end}` }, signal: ctrl.signal });
-              if (r.status !== 206) throw new Error('HTTP ' + r.status);
-              blob = await r.blob(); if (blob.size !== end - start + 1) throw new Error('short read');
-              if (i === 0 && String.fromCharCode(...new Uint8Array(await blob.slice(0, 4).arrayBuffer())) !== 'GGUF') throw new Error('not a model file');
-              break;
-            } catch (e) { if (ctrl.signal.aborted || ++tries >= 4) throw e; await new Promise(r => setTimeout(r, 1500 * tries)); }
+      const files = aiFiles(meta), size = (f, i) => Math.min(meta.chunk, f.total - i * meta.chunk);
+      ai.dl.total = files.reduce((a, f) => a + f.total, 0);
+      ai.dl.loaded = files.reduce((a, f) => a + (f.done || []).reduce((x, i) => x + size(f, i), 0), 0);
+      const t0 = performance.now(), b0 = ai.dl.loaded;
+      for (let k = 0; k < files.length; k++) {
+        const f = files[k], n = Math.ceil(f.total / meta.chunk), done = new Set(f.done || []);
+        const todo = [...Array(n).keys()].filter(i => !done.has(i));
+        const worker = async () => {
+          while (todo.length) {
+            const i = todo.shift(), start = i * meta.chunk, end = start + size(f, i) - 1;
+            let blob, tries = 0;
+            for (;;) {
+              try {
+                const r = await fetch(f.url, { headers: { Range: `bytes=${start}-${end}` }, signal: ctrl.signal });
+                if (r.status !== 206) throw new Error('HTTP ' + r.status);
+                blob = await r.blob(); if (blob.size !== end - start + 1) throw new Error('short read');
+                if (i === 0 && String.fromCharCode(...new Uint8Array(await blob.slice(0, 4).arrayBuffer())) !== 'GGUF') throw new Error('not a model file');
+                break;
+              } catch (e) { if (ctrl.signal.aborted || ++tries >= 4) throw e; await new Promise(r => setTimeout(r, 1500 * tries)); }
+            }
+            await offline.putFile(aiPartKey(id, f, i), blob);
+            done.add(i);
+            const saved = aiMeta(id) || meta;
+            if (saved.files) saved.files[k].done = [...done]; else saved.done = [...done];
+            store.set('ai-dl-' + id, saved);
+            ai.dl.loaded += blob.size;
+            const dt = (performance.now() - t0) / 1000; if (dt > 1) ai.dl.speed = (ai.dl.loaded - b0) / dt;
+            aiProgress();
           }
-          await offline.putFile(`ai:${id}:${i}`, blob);
-          done.add(i); meta.done = [...done]; store.set('ai-dl-' + id, meta);
-          ai.dl.loaded += blob.size;
-          const dt = (performance.now() - t0) / 1000; if (dt > 1) { ai.dl.speed = (ai.dl.loaded - b0) / dt; }
-          aiProgress();
-        }
-      };
-      await Promise.all([worker(), worker(), worker()]);
-      meta.complete = true; store.set('ai-dl-' + id, meta); store.set('ai-model', id);
+        };
+        await Promise.all([worker(), worker(), worker()]);
+      }
+      meta = aiMeta(id); meta.complete = true; store.set('ai-dl-' + id, meta);
+      if (!m.vision || !aiTextIds().some(aiReady)) store.set('ai-model', id);   // Vision is an add-on: keep the chosen chat model
       try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch {}
-      ai.dl = null; toast('Globex AI is ready');
+      ai.dl = null; toast(m.vision ? 'Vision is ready. Add a picture to try it.' : 'Globex AI is ready');
     } catch (e) {
       if (ctrl.signal.aborted) { ai.dl = null; }
       else { console.error(e); ai.dl.error = e.message === 'blocked'
@@ -1530,58 +1579,92 @@
     }
     renderAIAgain();
   }
-  async function aiImportFile(file) {
-    if (!file) return;
-    const head = String.fromCharCode(...new Uint8Array(await file.slice(0, 4).arrayBuffer()));
-    if (head !== 'GGUF') return toast('That isn’t a model file. Choose a .gguf file.');
-    const id = 'file-' + file.size;
-    ai.dl = { id, ctrl: new AbortController(), loaded: 0, total: file.size, speed: 0, error: null, importing: true };
+  async function aiImportFile(list) {
+    const picked = [...(list || [])]; if (!picked.length) return;
+    for (const f of picked) if (String.fromCharCode(...new Uint8Array(await f.slice(0, 4).arrayBuffer())) !== 'GGUF') return toast('“' + f.name + '” isn’t a model file. Choose .gguf files.');
+    picked.sort((a, b) => /mmproj/i.test(a.name) - /mmproj/i.test(b.name));   // model first, picture reader second
+    const vision = picked.some(f => /mmproj/i.test(f.name));
+    const id = (vision ? 'filev-' : 'file-') + picked.reduce((a, f) => a + f.size, 0);
+    const total = picked.reduce((a, f) => a + f.size, 0);
+    ai.dl = { id, ctrl: new AbortController(), loaded: 0, total, speed: 0, error: null, importing: true };
     renderAIAgain();
     try {
-      const n = Math.ceil(file.size / AI_CHUNK);
-      for (let i = 0; i < n; i++) {
-        await offline.putFile(`ai:${id}:${i}`, file.slice(i * AI_CHUNK, Math.min(file.size, (i + 1) * AI_CHUNK)));
-        ai.dl.loaded = Math.min(file.size, (i + 1) * AI_CHUNK); aiProgress();
+      const files = [];
+      for (let k = 0; k < picked.length; k++) {
+        const file = picked[k], n = Math.ceil(file.size / AI_CHUNK), f = { prefix: `f${k}:` };
+        for (let i = 0; i < n; i++) { const part = file.slice(i * AI_CHUNK, Math.min(file.size, (i + 1) * AI_CHUNK)); await offline.putFile(aiPartKey(id, f, i), part); ai.dl.loaded += part.size; aiProgress(); }
+        files.push({ url: 'file', name: file.name, total: file.size, done: [...Array(n).keys()] });
       }
-      store.set('ai-dl-' + id, { url: 'file', total: file.size, chunk: AI_CHUNK, done: [...Array(n).keys()], complete: true, name: file.name });
-      store.set('ai-model', id); ai.dl = null; toast('Model loaded. Globex AI is ready.');
+      store.set('ai-dl-' + id, { files, chunk: AI_CHUNK, complete: true, vision });
+      if (!vision || !aiTextIds().some(aiReady)) store.set('ai-model', id);
+      ai.dl = null; toast(vision ? 'Picture model loaded.' : 'Model loaded. Globex AI is ready.');
     } catch (e) { console.error(e); ai.dl.error = 'Couldn’t save the model file. There may not be enough space.'; }
     renderAIAgain();
   }
   async function aiDelete(id) {
     const meta = aiMeta(id); if (!meta) return;
     if (ai.loadedId === id && ai.engine) { try { await ai.engine.exit(); } catch {} ai.engine = null; ai.loadedId = null; }
-    const n = Math.ceil(meta.total / meta.chunk);
-    for (let i = 0; i < n; i++) await offline.deleteFile(`ai:${id}:${i}`).catch(() => {});
+    for (const f of aiFiles(meta)) { const n = Math.ceil(f.total / meta.chunk); for (let i = 0; i < n; i++) await offline.deleteFile(aiPartKey(id, f, i)).catch(() => {}); }
     store.del('ai-dl-' + id); if (store.get('ai-model', null) === id) store.del('ai-model');
   }
 
   // Load the saved model into the engine (GPU if available, otherwise the processor).
-  async function aiEnsureLoaded() {
-    const id = aiActive(); if (!id) throw new Error('no model');
+  // Which model a chat needs: chats with pictures use a model that can see.
+  const aiVisionId = () => aiReady(AI_VISION) ? AI_VISION : (Object.keys(localStorage).map(k => k.replace(/^globex:ai-dl-/, '')).find(k => k.startsWith('filev-') && aiReady(k)) || null);
+  const aiWant = chat => chat && chat.messages.some(x => x.img) && aiVisionId() ? aiVisionId() : aiActive();
+  async function aiEnsureLoaded(id) {
+    id = id || aiWant(aiChat()); if (!id) throw new Error('no model');
     if (ai.engine && ai.loadedId === id) return;
     if (ai.loading) return ai.loading;
     ai.loading = (async () => {
       if (ai.engine) { try { await ai.engine.exit(); } catch {} ai.engine = null; ai.loadedId = null; }
-      const meta = aiMeta(id), n = Math.ceil(meta.total / meta.chunk), parts = [];
-      for (let i = 0; i < n; i++) { const b = await offline.file(`ai:${id}:${i}`); if (!b) throw new Error('model piece missing'); parts.push(b); }
-      const model = new Blob(parts);
+      const meta = aiMeta(id), blobs = [];
+      for (const f of aiFiles(meta)) {
+        const n = Math.ceil(f.total / meta.chunk), parts = [];
+        for (let i = 0; i < n; i++) { const b = await offline.file(aiPartKey(id, f, i)); if (!b) throw new Error('model piece missing'); parts.push(b); }
+        blobs.push(new Blob(parts));
+      }
       const mod = await aiLoadEngineLib();
       const wasm = URL.createObjectURL(await aiEngineFile('wasm/wllama.wasm', 'application/wasm'));
       const gpu = await aiHasGPU();
       const make = () => { try { return new mod.Wllama({ default: wasm }, { suppressNativeLog: true, allowOffline: true }); }
         catch { return new mod.Wllama({ default: wasm }, { suppressNativeLog: true, allowOffline: true, cacheManager: {} }); } };
       let w = make();
-      try { await w.loadModel([model], { n_ctx: gpu ? 4096 : 2048, n_gpu_layers: gpu ? 999 : 0 }); ai.onGPU = gpu; }
+      const ctx = blobs.length > 1 ? 4096 : gpu ? 4096 : 2048;   // pictures need more room
+      try { await w.loadModel(blobs, { n_ctx: ctx, n_gpu_layers: gpu ? 999 : 0 }); ai.onGPU = gpu; ai.ctx = ctx; }
       catch (e) {
         if (!gpu) throw e;
         try { await w.exit(); } catch {}
-        w = make(); await w.loadModel([model], { n_ctx: 2048, n_gpu_layers: 0 }); ai.onGPU = false;   // graphics chip failed: use the processor
+        w = make(); await w.loadModel(blobs, { n_ctx: blobs.length > 1 ? 4096 : 2048, n_gpu_layers: 0 }); ai.onGPU = false; ai.ctx = blobs.length > 1 ? 4096 : 2048;   // graphics chip failed: use the processor
       }
       ai.engine = w; ai.loadedId = id;
     })();
     try { await ai.loading; } finally { ai.loading = null; }
   }
+
+  // Pictures: shrunk (max 768px) and kept in this browser's storage, not in the chat list.
+  const aiImgUrls = new Map();
+  async function aiPrepImage(file) {
+    if (!file || !/^image\//.test(file.type)) throw new Error('not an image');
+    const bmp = await createImageBitmap(file), sc = Math.min(1, 768 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(bmp.width * sc)); c.height = Math.max(1, Math.round(bmp.height * sc));
+    const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(bmp, 0, 0, c.width, c.height);
+    return new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error('encode')), 'image/jpeg', 0.88));
+  }
+  async function aiAttach(file) {
+    try {
+      const blob = await aiPrepImage(file);
+      if (ai.pending && ai.pending.url) URL.revokeObjectURL(ai.pending.url);
+      ai.pending = { blob, url: URL.createObjectURL(blob) };
+      renderAIAgain();
+    } catch { toast('That picture couldn’t be opened. Try a JPG or PNG.'); }
+  }
+  async function aiImgUrl(key) {
+    if (aiImgUrls.has(key)) return aiImgUrls.get(key);
+    const b = await offline.file(key).catch(() => null); if (!b) return null;
+    const u = URL.createObjectURL(b); aiImgUrls.set(key, u); return u;
+  }
+  const aiDropChatImages = chat => chat.messages.forEach(x => { if (x.img) offline.deleteFile(x.img).catch(() => {}); });
 
   // Chats
   const aiChat = () => ai.chats.find(c => c.id === ai.chatId) || null;
@@ -1592,23 +1675,41 @@
     if (ai.busy) return;
     let chat = aiChat();
     if (!regenerate) {
-      text = (text || '').trim(); if (!text) return;
-      if (!chat) { chat = { id: Date.now(), title: text.slice(0, 48), messages: [] }; ai.chats.unshift(chat); ai.chatId = chat.id; }
-      chat.messages.push({ role: 'user', content: text });
+      text = (text || '').trim();
+      const pic = ai.pending;
+      if (!text && !pic) return;
+      if (pic && !aiVisionId()) { ai.draft = text; ai.needVision = true; renderAIAgain(); return; }   // keep what they typed
+      if (!text) text = 'What’s in this picture?';
+      if (!chat) { chat = { id: Date.now(), title: (pic ? '🖼 ' : '') + text.slice(0, 48), messages: [] }; ai.chats.unshift(chat); ai.chatId = chat.id; }
+      const msg = { role: 'user', content: text };
+      if (pic) { msg.img = 'ai-img:' + Date.now() + Math.random().toString(36).slice(2, 7); await offline.putFile(msg.img, pic.blob); aiImgUrls.set(msg.img, pic.url); ai.pending = null; }
+      chat.messages.push(msg);
     } else if (chat && chat.messages.length && chat.messages[chat.messages.length - 1].role === 'assistant') chat.messages.pop();
     if (!chat) return;
     chat.updated = Date.now(); ai.chats = [chat, ...ai.chats.filter(c => c !== chat)]; aiSave();
     const reply = { role: 'assistant', content: '' }; chat.messages.push(reply);
     ai.busy = true; ai.ctrl = new AbortController(); renderAIAgain();
     try {
-      if (!ai.engine || ai.loadedId !== aiActive()) { await aiEnsureLoaded(); renderAIAgain(); }
-      // Keep the most recent messages that fit the AI's memory.
-      const budget = (ai.onGPU ? 4096 : 2048) * 3 - 1600; let used = 0; const hist = [];
-      for (let i = chat.messages.length - 2; i >= 0; i--) { const c = chat.messages[i].content.length; if (used + c > budget && hist.length) break; used += c; hist.unshift({ role: chat.messages[i].role, content: chat.messages[i].content }); }
+      const want = aiWant(chat); ai.failed = null;
+      if (!ai.engine || ai.loadedId !== want) {
+        try { await aiEnsureLoaded(want); } catch (e) { ai.failed = want; e.vision = want === aiVisionId(); throw e; }
+        renderAIAgain();
+      }
+      // Keep the most recent messages that fit the AI's memory. Pictures: only the latest two are shown to it.
+      const vision = !!(aiMeta(want) && aiFiles(aiMeta(want)).length > 1);
+      const budget = (ai.ctx || 2048) * 3 - 1600 - (vision ? 2400 : 0); let used = 0, pics = 0; const hist = [];
+      for (let i = chat.messages.length - 2; i >= 0; i--) {
+        const x = chat.messages[i], c = x.content.length; if (used + c > budget && hist.length) break; used += c;
+        if (x.img && vision && pics < 2) {
+          const b = await offline.file(x.img).catch(() => null);
+          if (b) { pics++; hist.unshift({ role: x.role, content: [{ type: 'image', data: await b.arrayBuffer() }, { type: 'text', text: x.content }] }); continue; }
+        }
+        hist.unshift({ role: x.role, content: x.img ? '[picture] ' + x.content : x.content });
+      }
       const max = { short: 256, normal: 768, long: 1536 }[ai.len] || 768;
       const t0 = performance.now(); let n = 0;
       await ai.engine.createChatCompletion({
-        messages: [{ role: 'system', content: AI_SYSTEM }, ...hist], max_tokens: max, temperature: 0.7, top_p: 0.9, top_k: 40,
+        messages: [{ role: 'system', content: vision ? AI_VISION_SYSTEM : AI_SYSTEM }, ...hist], max_tokens: max, temperature: 0.7, top_p: 0.9, top_k: 40,
         stream: true, abortSignal: ai.ctrl.signal,
         onData: c => { const d = c && c.choices && c.choices[0] && c.choices[0].delta && c.choices[0].delta.content; if (d) { reply.content += d; n++; aiStream(reply); } },
       });
@@ -1616,7 +1717,9 @@
     } catch (e) {
       if (!(e && (e.name === 'AbortError' || e.name === 'WllamaAbortError' || /abort/i.test(e.message)))) {
         console.error(e);
-        if (!reply.content) reply.content = '*Sorry, something went wrong running the AI on this device.* ' + (/memory|alloc/i.test(String(e && e.message)) ? 'It may not have enough memory. Try the **Quick** model in the menu above.' : 'Try again, or reload the page.');
+        if (!reply.content) reply.content = e && e.vision
+          ? '*Sorry, the Vision model couldn’t start on this device.* It may not have enough memory, or the download may be damaged. You can delete it from the model menu and download it again.'
+          : '*Sorry, something went wrong running the AI on this device.* ' + (/memory|alloc/i.test(String(e && e.message)) ? 'It may not have enough memory. Try the **Quick** model in the menu above.' : 'Try again, or reload the page.');
       }
     }
     if (!reply.content) chat.messages.pop();
@@ -1673,10 +1776,11 @@
     const wrap = document.createElement('div'); wrap.className = 'ai' + (ai.sideOpen ? ' show-side' : '');
     const active = aiActive();
     // ---- setup (no model yet, or downloading) ----
-    if (!active || (ai.dl && ai.dl.id !== active)) {
+    if (!active || (ai.dl && ai.dl.id !== active && !ai.dl.inline)) {
       if (ai.gpu === null) aiHasGPU().then(renderAIAgain);
       const gpu = ai.gpu === true, mem = navigator.deviceMemory || 8;
       const rec = gpu && mem >= 4 ? 'qwen25-15b' : 'qwen25-05b';
+      if (ai.needVision) ai.pick = AI_VISION;
       ai.pick = ai.pick || rec;
       const resume = AI_MODELS.find(m => { const x = aiMeta(m.id); return x && !x.complete && x.done && x.done.length; });
       wrap.style.gridTemplateColumns = '1fr';
@@ -1688,7 +1792,7 @@
         <button class="btn primary ai-go" id="aiGo">${ai.dl && !ai.dl.error ? 'Pause download' : resume && resume.id === ai.pick ? 'Continue download' : aiReady(ai.pick) ? 'Use this model' : 'Download ' + aiModel(ai.pick).name + ' model'}</button>
         ${ai.dl ? `<div class="ai-prog"><div class="row2"><strong id="aiPct" style="color:var(--text)"></strong><span id="aiSize"></span></div><div class="ai-bar"><i id="aiBar"></i></div><div class="row2"><span>${ai.dl.importing ? 'Copying into this browser' : 'Saved as it downloads: safe to pause or lose Wi-Fi'}</span><span id="aiEta"></span></div></div>` : ''}
         ${ai.dl && ai.dl.error ? `<div class="ai-err">${ai.dl.error}</div>` : ''}
-        <div class="ai-alt">${active && !(ai.dl && !ai.dl.error) ? '<button id="aiBack">Back to chat</button> · ' : ''}Have the model file already? <button id="aiFile">Load it from a file</button><input type="file" id="aiFileIn" accept=".gguf" hidden>
+        <div class="ai-alt">${active && !(ai.dl && !ai.dl.error) ? '<button id="aiBack">Back to chat</button> · ' : ''}Have the model file already? <button id="aiFile">Load it from a file</button><input type="file" id="aiFileIn" accept=".gguf" multiple hidden>
         ${!gpu ? '<br><br>No graphics chip found, so it will use the processor. That works, just a little slower.' : ''}</div></div>`;
       wrap.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { if (ai.dl && !ai.dl.error) return; ai.pick = b.dataset.m; renderAIAgain(); });
       wrap.querySelector('#aiGo').onclick = () => {
@@ -1698,13 +1802,15 @@
       };
       const back = wrap.querySelector('#aiBack'); if (back) back.onclick = () => { ai.dl = null; renderAIAgain(); };
       wrap.querySelector('#aiFile').onclick = () => wrap.querySelector('#aiFileIn').click();
-      wrap.querySelector('#aiFileIn').onchange = e => aiImportFile(e.target.files[0]);
+      wrap.querySelector('#aiFileIn').onchange = e => aiImportFile(e.target.files);
       $('rows').appendChild(wrap); aiProgress();
       return;
     }
     // ---- chat ----
-    const chat = aiChat(), m = aiModel(active);
-    if (!ai.engine && !ai.loading && !ai.busy) aiEnsureLoaded().then(renderAIAgain, e => { console.error(e); toast('Couldn’t start the AI on this device.'); renderAIAgain(); });
+    const chat = aiChat(), m = aiModel(ai.loadedId || aiWant(chat));
+    const want = aiWant(chat);
+    if (!ai.engine && !ai.loading && !ai.busy && ai.failed !== want)   // warm up in the background, but never retry a model that just failed
+      aiEnsureLoaded(want).then(renderAIAgain, e => { console.error(e); ai.failed = want; toast('Couldn’t start the AI on this device.'); renderAIAgain(); });
     const chatsHtml = ai.chats.map(c => `<div class="ai-chat-item${c.id === ai.chatId ? ' on' : ''}" data-c="${c.id}" role="button" tabindex="0"><span></span><button class="x" data-del="${c.id}" aria-label="Delete chat">✕</button></div>`).join('');
     wrap.innerHTML = `
       <div class="ai-side"><button class="btn primary" id="aiNew">+ New chat</button>${ai.chats.length ? '<div class="lbl">Recent</div>' : ''}${chatsHtml}</div>
@@ -1713,10 +1819,13 @@
           <h2>Globex AI</h2><span class="ai-chip"><i class="${ai.busy || ai.loading ? 'busy' : ''}"></i>${m.name} · ${ai.engine ? (ai.onGPU ? 'Graphics chip' : 'Processor') : ai.loading ? 'Starting…' : 'On device'}</span>
           <span class="grow"></span>
           <select id="aiLen" aria-label="Answer length"><option value="short">Short answers</option><option value="normal">Normal answers</option><option value="long">Long answers</option></select>
-          <select id="aiModelSel" aria-label="Model">${AI_MODELS.map(x => `<option value="${x.id}">${x.name}${aiReady(x.id) ? '' : ' (download)'}</option>`).join('')}${active.startsWith('file-') ? `<option value="${active}">Your model file</option>` : ''}<option value="__del">Delete this model…</option></select>
+          <select id="aiModelSel" aria-label="Model">${AI_MODELS.filter(x => !x.vision).map(x => `<option value="${x.id}">${x.name}${aiReady(x.id) ? '' : ' (download)'}</option>`).join('')}${aiReady(AI_VISION) ? '<option value="__delv">Delete Vision model…</option>' : ''}${active.startsWith('file-') ? `<option value="${active}">Your model file</option>` : ''}<option value="__del">Delete this model…</option></select>
         </div>
         <div class="ai-scroll" id="aiScroll"><div class="ai-col" id="aiCol"></div></div>
-        <div class="ai-compose"><div class="ai-box"><textarea id="aiInput" rows="1" placeholder="Message Globex AI…"></textarea>
+        <div class="ai-compose">${ai.needVision && !aiVisionId() ? `<div class="ai-need"><div class="ai-orb">${AI_ICON}</div><div><strong>Add the Vision model to understand pictures</strong><span>A one-time download of ${aiModel(AI_VISION).approx}. It’s saved on this device and works offline.</span></div>${ai.dl && ai.dl.id === AI_VISION && !ai.dl.error ? `<div class="ai-need-prog"><div class="ai-bar"><i id="aiBar"></i></div><small id="aiPct"></small><small id="aiSize" hidden></small><small id="aiEta" hidden></small></div>` : `<button class="btn primary" id="aiGetVision">${ai.dl && ai.dl.error ? 'Try again' : 'Download'}</button>`}<button class="icon-btn" id="aiNeedX" aria-label="Close">✕</button></div>${ai.dl && ai.dl.id === AI_VISION && ai.dl.error ? `<div class="ai-err" style="max-width:760px;margin:0 auto 8px">${ai.dl.error}</div>` : ''}` : ''}
+          ${ai.pending ? `<div class="ai-pend"><img src="${ai.pending.url}" alt="Picture to send"><button id="aiPendX" aria-label="Remove picture">✕</button></div>` : ''}
+          <div class="ai-box"><button class="ai-attach" id="aiAttach" aria-label="Add a picture" title="Add a picture"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.8"/><path d="m21 15-5-5L5 21"/></svg></button><input type="file" id="aiPic" accept="image/*" hidden>
+          <textarea id="aiInput" rows="1" placeholder="${ai.pending ? 'Ask about this picture…' : 'Message Globex AI…'}"></textarea>
           <button class="ai-send" id="aiSend" aria-label="${ai.busy ? 'Stop' : 'Send'}">${ai.busy ? '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>'}</button></div>
           <div class="ai-note">Runs on your device and works offline. It can make mistakes, so double-check important things.</div></div>
       </div>`;
@@ -1730,7 +1839,11 @@
       chat.messages.forEach((msg, i) => {
         const last = i === chat.messages.length - 1, live = last && ai.busy && msg.role === 'assistant';
         const el = document.createElement('div'); el.className = 'ai-msg ' + (msg.role === 'user' ? 'user' : 'bot') + (live ? ' live' : '');
-        if (msg.role === 'user') { el.innerHTML = '<div class="ai-bubble"></div>'; el.firstChild.textContent = msg.content; }
+        if (msg.role === 'user') {
+          el.innerHTML = `<div class="ai-ucol">${msg.img ? '<img class="ai-uimg" alt="Shared picture">' : ''}<div class="ai-bubble"></div></div>`;
+          el.querySelector('.ai-bubble').textContent = msg.content;
+          if (msg.img) { const im = el.querySelector('img'); aiImgUrl(msg.img).then(u => { if (u) im.src = u; else im.remove(); }); im.onclick = () => window.open(im.src, '_blank'); }
+        }
         else {
           el.innerHTML = `<div class="ai-av">${AI_ICON}</div><div class="ai-body"><div class="ai-md${live ? ' ai-cursor' : ''}"></div>
             ${live ? '' : `<div class="ai-actions"><button data-a="copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Copy</button>
@@ -1745,39 +1858,51 @@
         col.appendChild(el);
       });
     }
-    if (ai.loading || (ai.busy && !ai.engine)) {
+    if (ai.busy && (ai.loading || !ai.engine)) {
       const ld = document.createElement('div'); ld.className = 'ai-load';
       ld.innerHTML = '<div class="spinner"></div><div>Waking up Globex AI…</div><small style="color:var(--text-3)">This takes a few seconds the first time.</small>';
       wrap.querySelector('.ai-main').appendChild(ld);
     }
     // wire up
     const input = wrap.querySelector('#aiInput'), send = wrap.querySelector('#aiSend');
-    const grow = () => { input.style.height = 'auto'; input.style.height = Math.min(200, input.scrollHeight) + 'px'; send.disabled = !ai.busy && !input.value.trim(); };
+    const grow = () => { input.style.height = 'auto'; input.style.height = Math.min(200, input.scrollHeight) + 'px'; send.disabled = !ai.busy && !input.value.trim() && !ai.pending; };
     input.value = ai.draft || ''; input.oninput = () => { ai.draft = input.value; grow(); };
-    input.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); if (!ai.busy && input.value.trim()) { const t = input.value; ai.draft = ''; aiSend(t); } } };
+    input.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); if (!ai.busy && (input.value.trim() || ai.pending)) { const t = input.value; ai.draft = ''; aiSend(t); } } };
     send.onclick = () => { if (ai.busy) { ai.ctrl && ai.ctrl.abort(); return; } const t = input.value; ai.draft = ''; aiSend(t); };
+    // pictures: button, paste, drag and drop
+    const picIn = wrap.querySelector('#aiPic');
+    wrap.querySelector('#aiAttach').onclick = () => picIn.click();
+    picIn.onchange = () => { if (picIn.files[0]) aiAttach(picIn.files[0]); };
+    input.addEventListener('paste', e => { const f = [...(e.clipboardData ? e.clipboardData.files : [])].find(x => /^image\//.test(x.type)); if (f) { e.preventDefault(); aiAttach(f); } });
+    const main = wrap.querySelector('.ai-main');
+    main.addEventListener('dragover', e => { e.preventDefault(); main.classList.add('drop'); });
+    main.addEventListener('dragleave', e => { if (!main.contains(e.relatedTarget)) main.classList.remove('drop'); });
+    main.addEventListener('drop', e => { e.preventDefault(); main.classList.remove('drop'); const f = [...e.dataTransfer.files].find(x => /^image\//.test(x.type)); if (f) aiAttach(f); });
+    const px = wrap.querySelector('#aiPendX'); if (px) px.onclick = () => { URL.revokeObjectURL(ai.pending.url); ai.pending = null; renderAIAgain(); };
+    const gv = wrap.querySelector('#aiGetVision'); if (gv) gv.onclick = () => aiDownload(AI_VISION, true);
+    const nx = wrap.querySelector('#aiNeedX'); if (nx) nx.onclick = () => { ai.needVision = false; if (ai.dl && ai.dl.id === AI_VISION && !ai.dl.error) ai.dl.inline = true; renderAIAgain(); };
     wrap.querySelector('#aiNew').onclick = aiNewChat;
     wrap.querySelector('#aiSideT').onclick = () => { ai.sideOpen = !ai.sideOpen; renderAIAgain(); };
     wrap.querySelectorAll('.ai-chat-item').forEach(el => el.onclick = e => {
       const del = e.target.closest('[data-del]');
-      if (del) { e.stopPropagation(); ai.chats = ai.chats.filter(c => String(c.id) !== del.dataset.del); if (String(ai.chatId) === del.dataset.del) ai.chatId = null; aiSave(); renderAIAgain(); return; }
+      if (del) { e.stopPropagation(); ai.chats.filter(c => String(c.id) === del.dataset.del).forEach(aiDropChatImages); ai.chats = ai.chats.filter(c => String(c.id) !== del.dataset.del); if (String(ai.chatId) === del.dataset.del) ai.chatId = null; aiSave(); renderAIAgain(); return; }
       if (ai.busy) return; ai.chatId = +el.dataset.c; ai.sideOpen = false; aiSave(); renderAIAgain();
     });
     const len = wrap.querySelector('#aiLen'); len.value = ai.len; len.onchange = () => { ai.len = len.value; store.set('ai-len', ai.len); };
     const ms = wrap.querySelector('#aiModelSel'); ms.value = active;
     ms.onchange = async () => {
       const v = ms.value; ms.value = active; if (ai.busy) return;
+      if (v === '__delv') { if (!confirm('Delete the Vision model from this browser? Chats with pictures will use the normal model.')) return; await aiDelete(AI_VISION); toast('Vision model deleted'); renderAIAgain(); return; }
       if (v === '__del') { if (!confirm(`Delete the ${aiModel(active).name} model from this browser? You can download it again later.`)) return; await aiDelete(active); toast('Model deleted'); renderAIAgain(); return; }
       if (aiReady(v)) { store.set('ai-model', v); renderAIAgain(); return; }
       ai.pick = v; aiDownload(v);
     };
     $('rows').appendChild(wrap);
-    grow();
+    grow(); send.disabled = !ai.busy && !input.value.trim() && !ai.pending;
     const sc = wrap.querySelector('#aiScroll'); sc.scrollTop = sc.scrollHeight;
     if (!ai.busy && matchMedia('(hover: hover)').matches) input.focus();
   }
   aiHasGPU();
-
 
   gate();
 })();
