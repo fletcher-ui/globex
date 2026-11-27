@@ -5,7 +5,7 @@
 <!-- Keep this line: the Globex launcher checks for it before using a download. -->
 <meta name="globex" content="site">
 <!-- Version: the launcher always picks the newest copy it can reach. Raise this number with every update. -->
-<meta name="globex-version" content="202611272215">
+<meta name="globex-version" content="202611272330">
 <!-- Optional extra addresses for this file (space-separated). The launcher remembers them and tries them first next time. -->
 <meta name="globex-mirrors" content="">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1427,12 +1427,24 @@
   ];
   const HF = (repo, file) => [`https://huggingface.co/${repo}/resolve/main/${file}`, `https://hf-mirror.com/${repo}/resolve/main/${file}`];
   const AI_MODELS = [
-    { id: 'qwen25-05b', name: 'Quick', label: 'Qwen 2.5 · 0.5B', approx: '≈ 400 MB',
+    { id: 'qwen3-06b', name: 'Quick', label: 'Qwen3 · 0.6B', approx: '≈ 400 MB',
+      desc: 'Fast on any computer, and downloads even where AI sites are blocked.', speed: 'Fastest · works at school',
+      // Qwen3-0.6B (Q4_K_M, Apache-2.0), published on npm in 5 checked parts. npm versions can never change,
+      // and every part is also checked against its fingerprint (SHA-256) before it's saved.
+      npm: [
+        { pkg: 'tripilot-model-qwen-part-1', ver: '0.1.0-alpha.1', size: 80000000, sha256: '79cdb8b5a9289d809a115dbb7438b99323b958a143a594a85c1f503c78366995' },
+        { pkg: 'tripilot-model-qwen-part-2', ver: '0.1.0-alpha.1', size: 80000000, sha256: 'ae1fe1632f35dfd5f6faacf260ec8b970bfbec6c86224d7d992270ed05faeaf9' },
+        { pkg: 'tripilot-model-qwen-part-3', ver: '0.1.0-alpha.1', size: 80000000, sha256: '54f4278690385e5727083e2785b0a48fb586c1c7da73443dee2fd433e6485284' },
+        { pkg: 'tripilot-model-qwen-part-4', ver: '0.1.0-alpha.1', size: 80000000, sha256: '275e558514f9760af4d5c3d6aba695387d4a9b2bec2c241e31bd861a8c288b0d' },
+        { pkg: 'tripilot-model-qwen-part-5', ver: '0.1.0-alpha.1', size: 76705472, sha256: '4797e05d23ab6796132b092f6c16fad8bd8184340cb3b159f7cfffefd814a7c9' },
+      ],
+      sources: HF('unsloth/Qwen3-0.6B-GGUF', 'Qwen3-0.6B-Q4_K_M.gguf').map(u => u.replace('/resolve/main/', '/resolve/50968a4468ef4233ed78cd7c3de230dd1d61a56b/')) },
+    { id: 'qwen25-05b', hidden: true, name: 'Quick (old)', label: 'Qwen 2.5 · 0.5B', approx: '≈ 400 MB',
       desc: 'Fast on any computer. Good for quick questions and simple help.', speed: 'Fastest',
       repos: ['Qwen/Qwen2.5-0.5B-Instruct-GGUF', 'bartowski/Qwen2.5-0.5B-Instruct-GGUF'], prefer: ['q4_k_m', 'q5_k_m', 'q8_0'],
       sources: [...HF('Qwen/Qwen2.5-0.5B-Instruct-GGUF', 'qwen2.5-0.5b-instruct-q4_k_m.gguf'), ...HF('bartowski/Qwen2.5-0.5B-Instruct-GGUF', 'Qwen2.5-0.5B-Instruct-Q4_K_M.gguf')] },
     { id: 'qwen25-15b', name: 'Smart', label: 'Qwen 2.5 · 1.5B', approx: '≈ 1.1 GB',
-      desc: 'Noticeably smarter answers, homework help and writing. Best with a graphics chip.', speed: 'Smarter',
+      desc: 'Smarter answers and writing. Needs Hugging Face, which schools often block: get it at home.', speed: 'Smarter',
       repos: ['Qwen/Qwen2.5-1.5B-Instruct-GGUF', 'bartowski/Qwen2.5-1.5B-Instruct-GGUF'], prefer: ['q4_k_m', 'q5_k_m', 'q8_0'],
       sources: [...HF('Qwen/Qwen2.5-1.5B-Instruct-GGUF', 'qwen2.5-1.5b-instruct-q4_k_m.gguf'), ...HF('bartowski/Qwen2.5-1.5B-Instruct-GGUF', 'Qwen2.5-1.5B-Instruct-Q4_K_M.gguf')] },
     { id: 'smolvlm-500m', name: 'Vision', label: 'SmolVLM · 0.5B', approx: '≈ 550 MB', vision: true,
@@ -1536,15 +1548,87 @@
     if (m.sources) return [m.sources];   // the file list couldn't be read: fall back to the known addresses
     const err = new Error('blocked'); err.details = errs.join(' · '); throw err;
   }
+  // npm download: each part is a small package archive; unpack it, check its fingerprint, save it.
+  const AI_NPM_HOSTS = [
+    p => `https://registry.npmjs.org/${p.pkg}/-/${p.pkg}-${p.ver}.tgz`, p => `https://registry.npmmirror.com/${p.pkg}/-/${p.pkg}-${p.ver}.tgz`,
+    p => `https://cdn.jsdelivr.net/npm/${p.pkg}@${p.ver}/artifacts/weights.part`, p => `https://unpkg.com/${p.pkg}@${p.ver}/artifacts/weights.part`,
+  ];
+  const AI_NPM_CHUNK = 16000000;   // parts are 80 MB = exactly 5 pieces
+  function aiUntar(buf, want) {
+    const str = (a, n) => { let t = ''; for (let i = a; i < a + n && buf[i]; i++) t += String.fromCharCode(buf[i]); return t; };
+    for (let pos = 0; pos + 512 <= buf.length;) {
+      const name = str(pos, 100); if (!name) break;
+      const prefix = str(pos + 345, 155), full = prefix ? prefix + '/' + name : name, size = parseInt(str(pos + 124, 12).trim() || '0', 8);
+      if (full === want || full.endsWith('/' + want.split('/').slice(1).join('/'))) return buf.subarray(pos + 512, pos + 512 + size);
+      pos += 512 + Math.ceil(size / 512) * 512;
+    }
+    throw new Error('file not found in package');
+  }
+  async function aiFetchNpmPart(url, p, signal, onBytes) {
+    const r = await fetch(url, { signal }); if (!r.ok) throw new Error('HTTP ' + r.status);
+    const len = +r.headers.get('content-length') || 0; let got = 0;
+    const body = r.body.pipeThrough(new TransformStream({ transform(c, ctl) { got += c.length; onBytes(got, len); ctl.enqueue(c); } }));
+    let buf;
+    if (/\.tgz$/.test(url)) buf = aiUntar(new Uint8Array(await new Response(body.pipeThrough(new DecompressionStream('gzip'))).arrayBuffer()), 'package/artifacts/weights.part');
+    else buf = new Uint8Array(await new Response(body).arrayBuffer());
+    if (buf.length !== p.size) throw new Error('wrong size');
+    if (crypto.subtle) {
+      const h = [...new Uint8Array(await crypto.subtle.digest('SHA-256', buf))].map(b => b.toString(16).padStart(2, '0')).join('');
+      if (h !== p.sha256) throw new Error('fingerprint mismatch');
+    }
+    return buf;
+  }
+  async function aiNpmDownload(id, m, ctrl) {
+    const CH = AI_NPM_CHUNK, total = m.npm.reduce((a, p) => a + p.size, 0);
+    let meta = aiMeta(id);
+    if (!meta || !meta.npm) { meta = { files: [{ url: 'npm', total, done: [] }], chunk: CH, npm: true }; store.set('ai-dl-' + id, meta); }
+    const f = aiFiles(meta)[0], done = new Set(meta.files[0].done), piece = i => Math.min(CH, total - i * CH);
+    const savedBytes = () => [...done].reduce((a, i) => a + piece(i), 0);
+    ai.dl.total = total; ai.dl.loaded = savedBytes();
+    const t0 = performance.now(), b0 = ai.dl.loaded;
+    let off = 0;
+    for (const p of m.npm) {
+      const first = off / CH, count = Math.ceil(p.size / CH); off += p.size;
+      if ([...Array(count).keys()].every(j => done.has(first + j))) continue;
+      const base = savedBytes(); let buf = null; const errs = [];
+      for (const mk of AI_NPM_HOSTS) {
+        const url = mk(p);
+        try {
+          buf = await aiFetchNpmPart(url, p, ctrl.signal, (got, len) => {
+            ai.dl.loaded = base + (len ? got / len : 0) * p.size;
+            const dt = (performance.now() - t0) / 1000; if (dt > 1) ai.dl.speed = (ai.dl.loaded - b0) / dt; aiProgress();
+          });
+          break;
+        } catch (e) { if (ctrl.signal.aborted) throw e; errs.push(url.split('/')[2] + ': ' + e.message); }
+      }
+      if (!buf) { const er = new Error('blocked'); er.details = errs.join(' · '); throw er; }
+      for (let j = 0; j < count; j++) {
+        const i = first + j; if (done.has(i)) continue;
+        await offline.putFile(aiPartKey(id, f, i), new Blob([buf.subarray(j * CH, Math.min(p.size, (j + 1) * CH))]));
+        done.add(i); const sv = aiMeta(id) || meta; sv.files[0].done = [...done]; store.set('ai-dl-' + id, sv);
+      }
+      ai.dl.loaded = savedBytes(); aiProgress();
+    }
+  }
   const aiSaveErr = e => /quota|space|SecurityError|not allowed|denied|UnknownError|InvalidState/i.test(String(e && (e.name + ' ' + e.message)));
   async function aiDownload(id, inline, bg) {
-    const m = aiModel(id);
+    let m = aiModel(id);
     const ctrl = new AbortController();
     ai.dl = { id, ctrl, loaded: 0, total: 0, speed: 0, error: null, inline: !!inline, bg: !!bg };
     renderAIAgain();
     try {
       try { await offline.putFile('ai-test', new Blob(['ok'])); await offline.deleteFile('ai-test'); }   // can this browser save at all?
       catch (e) { const er = new Error('cannot save'); er.save = true; throw er; }
+      let npmDone = false;
+      if (m.npm && !(aiMeta(id) && !aiMeta(id).npm)) {
+        try { await aiNpmDownload(id, m, ctrl); npmDone = true; }
+        catch (e) {
+          if (ctrl.signal.aborted || (aiMeta(id) && aiMeta(id).files[0].done.length)) throw e;   // keep what's saved; continue later
+          store.del('ai-dl-' + id); m = { ...m, npm: null, repos: null, npmErr: e.details || e.message };   // npm unreachable: try Hugging Face instead
+          console.warn('npm download failed, trying Hugging Face:', m.npmErr);
+        }
+      }
+      if (!npmDone) {
       let meta = aiMeta(id);
       if (!meta || !(meta.files || meta.url)) {
         const groups = await aiResolve(m, ctrl.signal), files = [], tried = [];
@@ -1613,7 +1697,8 @@
           if (done.size < n) throw new Error('download ended early');
         }
       }
-      meta = aiMeta(id); meta.complete = true; store.set('ai-dl-' + id, meta);
+      }
+      const meta = aiMeta(id); meta.complete = true; store.set('ai-dl-' + id, meta);
       if (!m.vision || !aiTextIds().some(aiReady)) store.set('ai-model', id);   // Vision is an add-on: keep the chosen chat model
       try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch {}
       ai.dl = null; toast(m.vision ? 'Vision is ready. Add a picture to try it.' : 'Globex AI is ready');
@@ -1625,9 +1710,11 @@
         ai.dl.error = e.save || aiSaveErr(e)
           ? 'This browser isn’t letting Globex save the AI. The device may be out of space, or a school setting may block saving. Press “Check this device” below for details.'
           : e.message === 'blocked'
-          ? 'Couldn’t reach the AI download. Hugging Face (where AI models are hosted) may be blocked on this network. Try on another network, e.g. at home: once it’s saved it works anywhere. You can also load a model file instead.'
+          ? (aiModel(id).npm ? 'Couldn’t reach any of the AI download sites. They may all be blocked here. Once it’s saved (e.g. at home) it works anywhere, or load the AI from a file.'
+                             : 'Couldn’t reach the AI download. Hugging Face (where this model is hosted) is often blocked at school. Download it at home: once it’s saved it works anywhere. The Quick model downloads from other sites.')
           : 'The download stopped (' + e.message + '). Press the button to continue where it left off.';
-        if (e.details) ai.dl.error += '<br><small style="opacity:.75">' + e.details.replace(/[<>&]/g, '') + '</small>';
+        const det = [m.npmErr, e.details].filter(Boolean).join(' · ');
+        if (det) ai.dl.error += '<br><small style="opacity:.75">' + det.replace(/[<>&]/g, '') + '</small>';
       }
     }
     renderAIAgain(); renderNav();
@@ -1676,7 +1763,8 @@
     const probe = async (url, name) => { try { const c = new AbortController(); setTimeout(() => c.abort(), 8000); const r = await fetch(url, { signal: c.signal }); add(r.ok, name, r.ok ? 'reachable' : 'HTTP ' + r.status); }
       catch (e) { add(false, name, 'blocked or offline'); } };
     await probe(AI_ENGINE_BASES[0] + 'index.js', 'AI engine download (jsDelivr)');
-    await probe('https://huggingface.co/api/models/Qwen/Qwen2.5-0.5B-Instruct-GGUF', 'AI model download (Hugging Face)');
+    await probe('https://registry.npmjs.org/tripilot-model-qwen-part-1', 'Quick AI download (npm)');
+    await probe('https://huggingface.co/api/models/Qwen/Qwen2.5-0.5B-Instruct-GGUF', 'Smart/Vision download (Hugging Face)');
     await probe('https://hf-mirror.com/api/models/Qwen/Qwen2.5-0.5B-Instruct-GGUF', 'Backup model download (hf-mirror)');
     const saved = AI_MODELS.filter(x => aiReady(x.id)).map(x => x.name);
     add(saved.length ? true : null, 'AI saved on this device', saved.length ? saved.join(', ') : 'none yet');
@@ -1820,11 +1908,12 @@
         hist.unshift({ role: x.role, content: x.img ? '[picture] ' + x.content : x.content });
       }
       const max = { short: 256, normal: 768, long: 1536 }[ai.len] || 768;
-      const t0 = performance.now(); let n = 0;
+      const t0 = performance.now(); let n = 0, raw = '';
       await ai.engine.createChatCompletion({
-        messages: [{ role: 'system', content: vision ? AI_VISION_SYSTEM : AI_SYSTEM }, ...hist], max_tokens: max, temperature: 0.7, top_p: 0.9, top_k: 40,
-        stream: true, abortSignal: ai.ctrl.signal,
-        onData: c => { const d = c && c.choices && c.choices[0] && c.choices[0].delta && c.choices[0].delta.content; if (d) { reply.content += d; n++; aiStream(reply); } },
+        messages: [{ role: 'system', content: vision ? AI_VISION_SYSTEM : AI_SYSTEM }, ...hist], max_tokens: max, temperature: 0.45, top_p: 0.8, top_k: 20,   // steadier, more accurate answers from small models
+        stream: true, abortSignal: ai.ctrl.signal, chat_template_kwargs: { enable_thinking: false },
+        onData: c => { const d = c && c.choices && c.choices[0] && c.choices[0].delta && c.choices[0].delta.content;
+          if (d) { raw += d; reply.content = raw.replace(/<think>[\s\S]*?(<\/think>\s*|$)/g, '').replace(/^\s+/, ''); n++; aiStream(reply); } },
       });
       reply.speed = n / ((performance.now() - t0) / 1000);
       break;
@@ -1901,7 +1990,7 @@
     if (!active || ai.showCheck || (ai.dl && ai.dl.id !== active && !ai.dl.inline)) {
       if (ai.gpu === null) aiHasGPU().then(renderAIAgain);
       const gpu = ai.gpu === true, mem = navigator.deviceMemory || 8;
-      const rec = gpu && mem >= 8 ? 'qwen25-15b' : 'qwen25-05b';
+      const rec = 'qwen3-06b';   // downloads anywhere (Smart needs Hugging Face)
       if (ai.needVision) ai.pick = AI_VISION;
       ai.pick = ai.pick || rec;
       const resume = AI_MODELS.find(m => { const x = aiMeta(m.id); return x && !x.complete && x.done && x.done.length; });
@@ -1909,7 +1998,7 @@
       wrap.innerHTML = `<div class="ai-setup"><div class="ai-empty"><div class="ai-orb">${AI_ICON}</div>
         <h1>Globex AI</h1><p>A real AI that runs entirely on your device. Download it once and it’s yours.</p></div>
         <div class="ai-feats"><span>${CHECK}Can’t be blocked once saved</span><span>${CHECK}Works with no internet</span><span>${CHECK}Private: nothing leaves your device</span></div>
-        <div class="ai-models">${AI_MODELS.map(m => `<button class="ai-model${ai.pick === m.id ? ' on' : ''}" data-m="${m.id}">${m.id === rec ? '<span class="rec">Best for this device</span>' : ''}
+        <div class="ai-models">${AI_MODELS.filter(m => !m.hidden).map(m => `<button class="ai-model${ai.pick === m.id ? ' on' : ''}" data-m="${m.id}">${m.id === rec ? '<span class="rec">Best for this device</span>' : ''}
           <span class="sz">${m.approx}</span><strong>${m.name}</strong><p>${m.desc}</p><small>${m.label} · ${m.speed}${aiReady(m.id) ? ' · ✓ saved' : ''}</small></button>`).join('')}</div>
         <button class="btn primary ai-go" id="aiGo">${ai.dl && !ai.dl.error ? 'Pause download' : resume && resume.id === ai.pick ? 'Continue download' : aiReady(ai.pick) ? 'Use this model' : 'Download ' + aiModel(ai.pick).name + ' model'}</button>
         ${ai.dl ? `<div class="ai-prog"><div class="row2"><strong id="aiPct" style="color:var(--text)"></strong><span id="aiSize"></span></div><div class="ai-bar"><i id="aiBar"></i></div><div class="row2"><span>${ai.dl.importing ? 'Copying into this browser' : 'Saved as it downloads: safe to pause or lose Wi-Fi'}</span><span id="aiEta"></span></div></div>` : ''}
@@ -1944,7 +2033,7 @@
           <h2>Globex AI</h2><span class="ai-chip"><i class="${ai.busy || ai.loading ? 'busy' : ''}"></i>${m.name} · ${ai.engine ? (ai.onGPU ? 'Graphics chip' : 'Processor') : ai.loading ? 'Starting…' : 'On device'}</span>
           <span class="grow"></span>
           <select id="aiLen" aria-label="Answer length"><option value="short">Short answers</option><option value="normal">Normal answers</option><option value="long">Long answers</option></select>
-          <select id="aiModelSel" aria-label="Model">${AI_MODELS.filter(x => !x.vision).map(x => `<option value="${x.id}">${x.name}${aiReady(x.id) ? '' : ' (download)'}</option>`).join('')}${aiReady(AI_VISION) ? '<option value="__delv">Delete Vision model…</option>' : ''}${active.startsWith('file-') ? `<option value="${active}">Your model file</option>` : ''}<option value="__share">Save AI as a file (to share)…</option><option value="__check">Check this device…</option><option value="__del">Delete this model…</option></select>
+          <select id="aiModelSel" aria-label="Model">${AI_MODELS.filter(x => !x.vision && (!x.hidden || aiReady(x.id))).map(x => `<option value="${x.id}">${x.name}${aiReady(x.id) ? '' : ' (download)'}</option>`).join('')}${aiReady(AI_VISION) ? '<option value="__delv">Delete Vision model…</option>' : ''}${active.startsWith('file-') ? `<option value="${active}">Your model file</option>` : ''}<option value="__share">Save AI as a file (to share)…</option><option value="__check">Check this device…</option><option value="__del">Delete this model…</option></select>
         </div>
         <div class="ai-scroll" id="aiScroll"><div class="ai-col" id="aiCol"></div></div>
         <div class="ai-compose">${ai.needVision && !aiVisionId() ? `<div class="ai-need"><div class="ai-orb">${AI_ICON}</div><div><strong>Add the Vision model to understand pictures</strong><span>A one-time download of ${aiModel(AI_VISION).approx}. It’s saved on this device and works offline.</span></div>${ai.dl && ai.dl.id === AI_VISION && !ai.dl.error ? `<div class="ai-need-prog"><div class="ai-bar"><i id="aiBar"></i></div><small id="aiPct"></small><small id="aiSize" hidden></small><small id="aiEta" hidden></small></div>` : `<button class="btn primary" id="aiGetVision">${ai.dl && ai.dl.error ? 'Try again' : 'Download'}</button>`}<button class="icon-btn" id="aiNeedX" aria-label="Close">✕</button></div>${ai.dl && ai.dl.id === AI_VISION && ai.dl.error ? `<div class="ai-err" style="max-width:760px;margin:0 auto 8px">${ai.dl.error}</div>` : ''}` : ''}
@@ -2083,7 +2172,7 @@
     ai.bgTried = Date.now();
     try { const q = await navigator.storage.estimate(); if ((q.quota || 0) - (q.usage || 0) < 1.5e9) return; } catch {}
     const gpu = await aiHasGPU(), mem = navigator.deviceMemory || 8;
-    aiDownload(gpu && mem >= 8 ? 'qwen25-15b' : 'qwen25-05b', false, true);
+    aiDownload('qwen3-06b', false, true);
   }
   function startAutoTasks() {
     setTimeout(() => autoUpdate().catch(() => {}), 3000);
